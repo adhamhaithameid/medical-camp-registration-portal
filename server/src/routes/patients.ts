@@ -3,6 +3,7 @@ import type { PatientResponse, PatientsResponse } from "@medical-camp/shared";
 import { prisma } from "../config/prisma";
 import { requireAuth, requireRoles } from "../middleware/auth";
 import { recordAudit } from "../services/audit";
+import { sendError, sendValidationError } from "../utils/http";
 import { mapPatient } from "../utils/mappers";
 import { patientInputSchema, patientUpdateSchema } from "../validation/patient";
 
@@ -42,7 +43,7 @@ adminPatientsRouter.get("/:id", async (request, response) => {
   const patientId = parseId(request.params.id);
 
   if (!patientId) {
-    return response.status(400).json({ message: "Patient id must be a positive integer" });
+    return sendError(request, response, 400, "Patient id must be a positive integer");
   }
 
   const patient = await prisma.patient.findUnique({
@@ -50,7 +51,7 @@ adminPatientsRouter.get("/:id", async (request, response) => {
   });
 
   if (!patient) {
-    return response.status(404).json({ message: "Patient not found" });
+    return sendError(request, response, 404, "Patient not found");
   }
 
   const payload: PatientResponse = {
@@ -64,10 +65,7 @@ adminPatientsRouter.post("/", async (request, response) => {
   const parsed = patientInputSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const patient = await prisma.patient.create({
@@ -104,16 +102,13 @@ adminPatientsRouter.patch("/:id", async (request, response) => {
   const patientId = parseId(request.params.id);
 
   if (!patientId) {
-    return response.status(400).json({ message: "Patient id must be a positive integer" });
+    return sendError(request, response, 400, "Patient id must be a positive integer");
   }
 
   const parsed = patientUpdateSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const existing = await prisma.patient.findUnique({
@@ -121,7 +116,7 @@ adminPatientsRouter.patch("/:id", async (request, response) => {
   });
 
   if (!existing) {
-    return response.status(404).json({ message: "Patient not found" });
+    return sendError(request, response, 404, "Patient not found");
   }
 
   const patient = await prisma.patient.update({
@@ -158,7 +153,7 @@ adminPatientsRouter.delete("/:id", async (request, response) => {
   const patientId = parseId(request.params.id);
 
   if (!patientId) {
-    return response.status(400).json({ message: "Patient id must be a positive integer" });
+    return sendError(request, response, 400, "Patient id must be a positive integer");
   }
 
   const existing = await prisma.patient.findUnique({
@@ -166,7 +161,7 @@ adminPatientsRouter.delete("/:id", async (request, response) => {
   });
 
   if (!existing) {
-    return response.status(404).json({ message: "Patient not found" });
+    return sendError(request, response, 404, "Patient not found");
   }
 
   const deleted = await prisma.patient.delete({

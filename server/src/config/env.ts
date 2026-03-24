@@ -32,6 +32,8 @@ const envSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
+  SENTRY_DSN: z.string().optional(),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
   DEFAULT_NOTIFICATION_EMAIL_DOMAIN: z.string().default("camp.local")
 });
 

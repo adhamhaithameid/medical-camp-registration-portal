@@ -10,6 +10,7 @@ import { prisma } from "../config/prisma";
 import { requireAuth, requireRoles } from "../middleware/auth";
 import { recordAudit } from "../services/audit";
 import { notifyRegistrationEvent } from "../services/notifications";
+import { sendError, sendValidationError } from "../utils/http";
 import { mapCamp, mapNotificationLog, mapRegistration } from "../utils/mappers";
 import {
   adminRegistrationsQuerySchema,
@@ -77,10 +78,7 @@ registrationsRouter.post("/", async (request, response) => {
   const parsed = registrationInputSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const camp = await prisma.camp.findUnique({
@@ -88,15 +86,18 @@ registrationsRouter.post("/", async (request, response) => {
   });
 
   if (!camp || !camp.isActive) {
-    return response.status(404).json({ message: "Camp not found or inactive" });
+    return sendError(request, response, 404, "Camp not found or inactive");
   }
 
   const duplicate = await hasActiveDuplicate(parsed.data.campId, parsed.data.contactNumber);
 
   if (duplicate) {
-    return response.status(409).json({
-      message: "Duplicate registration detected for this contact number and camp"
-    });
+    return sendError(
+      request,
+      response,
+      409,
+      "Duplicate registration detected for this contact number and camp"
+    );
   }
 
   const status = await resolveWaitlistStatus(parsed.data.campId, camp.capacity);
@@ -148,10 +149,7 @@ registrationsRouter.post("/lookup", async (request, response) => {
   const parsed = confirmationCodeSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const registration = await prisma.registration.findUnique({
@@ -162,7 +160,7 @@ registrationsRouter.post("/lookup", async (request, response) => {
   });
 
   if (!registration) {
-    return response.status(404).json({ message: "Registration not found" });
+    return sendError(request, response, 404, "Registration not found");
   }
 
   const countsByCamp = await getCampCounts([registration.campId]);
@@ -182,7 +180,7 @@ registrationsRouter.get("/:confirmationCode", async (request, response) => {
   });
 
   if (!registration) {
-    return response.status(404).json({ message: "Registration not found" });
+    return sendError(request, response, 404, "Registration not found");
   }
 
   const countsByCamp = await getCampCounts([registration.campId]);
@@ -199,10 +197,7 @@ registrationsRouter.patch("/:confirmationCode", async (request, response) => {
   const parsed = registrationUpdateSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const existing = await prisma.registration.findUnique({
@@ -219,20 +214,23 @@ registrationsRouter.patch("/:confirmationCode", async (request, response) => {
   });
 
   if (!existing) {
-    return response.status(404).json({ message: "Registration not found" });
+    return sendError(request, response, 404, "Registration not found");
   }
 
   if (!existing.isActive || existing.status === RegistrationStatus.CANCELLED) {
-    return response.status(409).json({ message: "Cancelled registrations cannot be edited" });
+    return sendError(request, response, 409, "Cancelled registrations cannot be edited");
   }
 
   if (parsed.data.contactNumber) {
     const duplicate = await hasActiveDuplicate(existing.campId, parsed.data.contactNumber, existing.id);
 
     if (duplicate) {
-      return response.status(409).json({
-        message: "Duplicate registration detected for this contact number and camp"
-      });
+      return sendError(
+        request,
+        response,
+        409,
+        "Duplicate registration detected for this contact number and camp"
+      );
     }
   }
 
@@ -292,11 +290,11 @@ registrationsRouter.delete("/:confirmationCode", async (request, response) => {
   });
 
   if (!existing) {
-    return response.status(404).json({ message: "Registration not found" });
+    return sendError(request, response, 404, "Registration not found");
   }
 
   if (!existing.isActive || existing.status === RegistrationStatus.CANCELLED) {
-    return response.status(409).json({ message: "Registration already cancelled" });
+    return sendError(request, response, 409, "Registration already cancelled");
   }
 
   const cancelled = await prisma.registration.update({
@@ -353,17 +351,14 @@ adminRegistrationsRouter.get("/", async (request, response) => {
   const parsed = adminRegistrationsQuerySchema.safeParse(request.query);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const page = Math.max(1, Math.trunc(parsed.data.page ?? 1));
   const pageSize = Math.min(100, Math.max(1, Math.trunc(parsed.data.pageSize ?? 20)));
 
   if (parsed.data.campId !== undefined && (!Number.isInteger(parsed.data.campId) || parsed.data.campId <= 0)) {
-    return response.status(400).json({ message: "campId must be a positive integer" });
+    return sendError(request, response, 400, "campId must be a positive integer");
   }
 
   const where = {
@@ -440,10 +435,7 @@ adminRegistrationsRouter.get("/export.csv", async (request, response) => {
   });
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const where = {
@@ -525,7 +517,7 @@ adminRegistrationsRouter.patch("/:id/promote", async (request, response) => {
   const registrationId = parseId(request.params.id);
 
   if (!registrationId) {
-    return response.status(400).json({ message: "Registration id must be a positive integer" });
+    return sendError(request, response, 400, "Registration id must be a positive integer");
   }
 
   const registration = await prisma.registration.findUnique({
@@ -543,11 +535,16 @@ adminRegistrationsRouter.patch("/:id/promote", async (request, response) => {
   });
 
   if (!registration) {
-    return response.status(404).json({ message: "Registration not found" });
+    return sendError(request, response, 404, "Registration not found");
   }
 
   if (registration.status !== RegistrationStatus.WAITLISTED || !registration.isActive) {
-    return response.status(409).json({ message: "Only active waitlisted registrations can be promoted" });
+    return sendError(
+      request,
+      response,
+      409,
+      "Only active waitlisted registrations can be promoted"
+    );
   }
 
   const confirmedCount = await prisma.registration.count({
@@ -559,7 +556,12 @@ adminRegistrationsRouter.patch("/:id/promote", async (request, response) => {
   });
 
   if (confirmedCount >= registration.camp.capacity) {
-    return response.status(409).json({ message: "No seats are currently available to promote this registration" });
+    return sendError(
+      request,
+      response,
+      409,
+      "No seats are currently available to promote this registration"
+    );
   }
 
   const promoted = await prisma.registration.update({
@@ -609,7 +611,7 @@ adminRegistrationsRouter.get("/:id/notifications", async (request, response) => 
   const registrationId = parseId(request.params.id);
 
   if (!registrationId) {
-    return response.status(400).json({ message: "Registration id must be a positive integer" });
+    return sendError(request, response, 400, "Registration id must be a positive integer");
   }
 
   const notifications = await prisma.notificationLog.findMany({

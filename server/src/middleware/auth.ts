@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import type { AdminRole } from "@prisma/client";
 import { AUTH_COOKIE_NAME, verifyAuthToken } from "../utils/auth";
+import { sendError } from "../utils/http";
 
 export const requireAuth = (
   request: Request,
@@ -11,7 +12,9 @@ export const requireAuth = (
     const token = request.cookies?.[AUTH_COOKIE_NAME];
 
     if (!token) {
-      return response.status(401).json({ message: "Authentication required" });
+      return sendError(request, response, 401, "Authentication required", {
+        errorCode: "AUTH_REQUIRED"
+      });
     }
 
     const payload = verifyAuthToken(token);
@@ -23,18 +26,24 @@ export const requireAuth = (
 
     return next();
   } catch {
-    return response.status(401).json({ message: "Invalid or expired session" });
+    return sendError(request, response, 401, "Invalid or expired session", {
+      errorCode: "AUTH_INVALID_SESSION"
+    });
   }
 };
 
 export const requireRoles = (...roles: AdminRole[]) => {
   return (request: Request, response: Response, next: NextFunction) => {
     if (!request.user) {
-      return response.status(401).json({ message: "Authentication required" });
+      return sendError(request, response, 401, "Authentication required", {
+        errorCode: "AUTH_REQUIRED"
+      });
     }
 
     if (!roles.includes(request.user.role)) {
-      return response.status(403).json({ message: "You do not have permission for this action" });
+      return sendError(request, response, 403, "You do not have permission for this action", {
+        errorCode: "PERMISSION_DENIED"
+      });
     }
 
     return next();

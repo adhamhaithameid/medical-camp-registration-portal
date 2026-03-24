@@ -5,6 +5,7 @@ import { prisma } from "../config/prisma";
 import { requireAuth, requireRoles } from "../middleware/auth";
 import { recordAudit } from "../services/audit";
 import { mapCamp } from "../utils/mappers";
+import { sendError, sendValidationError } from "../utils/http";
 import { campInputSchema, campUpdateSchema } from "../validation/camp";
 
 const campStatuses: RegistrationStatus[] = ["CONFIRMED", "WAITLISTED"];
@@ -64,7 +65,7 @@ publicCampsRouter.get("/:id", async (request, response) => {
   const campId = parseCampId(request.params.id);
 
   if (!campId) {
-    return response.status(400).json({ message: "Camp id must be a positive integer" });
+    return sendError(request, response, 400, "Camp id must be a positive integer");
   }
 
   const camp = await prisma.camp.findUnique({
@@ -72,7 +73,7 @@ publicCampsRouter.get("/:id", async (request, response) => {
   });
 
   if (!camp || !camp.isActive) {
-    return response.status(404).json({ message: "Camp not found" });
+    return sendError(request, response, 404, "Camp not found");
   }
 
   const countsByCamp = await getCampCounts([camp.id]);
@@ -104,10 +105,7 @@ adminCampsRouter.post("/", requireRoles("SUPER_ADMIN"), async (request, response
   const parsed = campInputSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const camp = await prisma.camp.create({
@@ -144,16 +142,13 @@ adminCampsRouter.patch("/:id", requireRoles("SUPER_ADMIN"), async (request, resp
   const campId = parseCampId(request.params.id);
 
   if (!campId) {
-    return response.status(400).json({ message: "Camp id must be a positive integer" });
+    return sendError(request, response, 400, "Camp id must be a positive integer");
   }
 
   const parsed = campUpdateSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const existing = await prisma.camp.findUnique({
@@ -161,7 +156,7 @@ adminCampsRouter.patch("/:id", requireRoles("SUPER_ADMIN"), async (request, resp
   });
 
   if (!existing) {
-    return response.status(404).json({ message: "Camp not found" });
+    return sendError(request, response, 404, "Camp not found");
   }
 
   const updated = await prisma.camp.update({
@@ -196,7 +191,7 @@ adminCampsRouter.post("/:id/deactivate", requireRoles("SUPER_ADMIN"), async (req
   const campId = parseCampId(request.params.id);
 
   if (!campId) {
-    return response.status(400).json({ message: "Camp id must be a positive integer" });
+    return sendError(request, response, 400, "Camp id must be a positive integer");
   }
 
   const camp = await prisma.camp.findUnique({
@@ -204,7 +199,7 @@ adminCampsRouter.post("/:id/deactivate", requireRoles("SUPER_ADMIN"), async (req
   });
 
   if (!camp) {
-    return response.status(404).json({ message: "Camp not found" });
+    return sendError(request, response, 404, "Camp not found");
   }
 
   const updated = await prisma.camp.update({

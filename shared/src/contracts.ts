@@ -239,7 +239,76 @@ export interface NotificationLogsResponse {
   notifications: NotificationLogRecord[];
 }
 
+export interface SystemHealthSnapshot {
+  status: "ok" | "degraded";
+  service: string;
+  timestamp: string;
+  uptimeSeconds: number;
+  dependencies: {
+    database: "up" | "down";
+  };
+  telemetry: {
+    sentryEnabled: boolean;
+    otelEnabled: boolean;
+  };
+}
+
+export interface SystemStatusResponse {
+  system: SystemHealthSnapshot;
+  auth: AuthResult;
+  diagnostics: {
+    failedApiCallsInMemory: number;
+    queuedNotifications: number;
+  };
+}
+
+export interface AuditLogRecord {
+  id: number;
+  actorId?: number | null;
+  actorRole?: AdminRole;
+  actorUsername?: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  details?: Record<string, unknown> | null;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+export interface FailedApiCallRecord {
+  timestamp: string;
+  requestId: string;
+  method: string;
+  path: string;
+  status: number;
+  durationMs: number;
+  errorCode: string;
+  message: string;
+  actorId?: number | null;
+  actorRole?: AdminRole | null;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export interface AdminDiagnosticsResponse {
+  generatedAt: string;
+  system: SystemHealthSnapshot;
+  auditLogs: AuditLogRecord[];
+  failedApiCalls: FailedApiCallRecord[];
+  queuedNotifications: NotificationLogRecord[];
+  summary: {
+    failedApiCalls: number;
+    auditLogs: number;
+    queuedNotifications: number;
+    queuedByStatus: Record<string, number>;
+  };
+}
+
 export interface ApiErrorResponse {
   message: string;
+  requestId?: string;
+  errorCode?: string;
   details?: string[];
+  fieldErrors?: Record<string, string[]>;
 }

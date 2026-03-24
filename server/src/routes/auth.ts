@@ -13,6 +13,7 @@ import {
 } from "../utils/auth";
 import { requireAuth, requireRoles } from "../middleware/auth";
 import { mapAdminUser } from "../utils/mappers";
+import { sendError, sendValidationError } from "../utils/http";
 
 const authRouter = Router();
 
@@ -27,10 +28,7 @@ authRouter.post("/login", async (request, response) => {
   const parsed = loginInputSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const user = await prisma.adminUser.findUnique({
@@ -38,13 +36,17 @@ authRouter.post("/login", async (request, response) => {
   });
 
   if (!user || !user.isActive) {
-    return response.status(401).json({ message: "Invalid username or password" });
+    return sendError(request, response, 401, "Invalid username or password", {
+      errorCode: "AUTH_INVALID_SESSION"
+    });
   }
 
   const isPasswordValid = await verifyPassword(parsed.data.password, user.passwordHash);
 
   if (!isPasswordValid) {
-    return response.status(401).json({ message: "Invalid username or password" });
+    return sendError(request, response, 401, "Invalid username or password", {
+      errorCode: "AUTH_INVALID_SESSION"
+    });
   }
 
   const token = signAuthToken({
@@ -153,7 +155,7 @@ usersRouter.get("/:id", async (request, response) => {
   const userId = Number(request.params.id);
 
   if (!Number.isInteger(userId) || userId <= 0) {
-    return response.status(400).json({ message: "Invalid user id" });
+    return sendError(request, response, 400, "Invalid user id");
   }
 
   const user = await prisma.adminUser.findUnique({
@@ -161,7 +163,7 @@ usersRouter.get("/:id", async (request, response) => {
   });
 
   if (!user) {
-    return response.status(404).json({ message: "User not found" });
+    return sendError(request, response, 404, "User not found");
   }
 
   return response.status(200).json({ user: mapAdminUser(user) });
@@ -171,10 +173,7 @@ usersRouter.post("/", async (request, response) => {
   const parsed = createAdminUserSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const existing = await prisma.adminUser.findUnique({
@@ -182,7 +181,7 @@ usersRouter.post("/", async (request, response) => {
   });
 
   if (existing) {
-    return response.status(409).json({ message: "Username already exists" });
+    return sendError(request, response, 409, "Username already exists");
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
@@ -210,16 +209,13 @@ usersRouter.patch("/:id", async (request, response) => {
   const userId = Number(request.params.id);
 
   if (!Number.isInteger(userId) || userId <= 0) {
-    return response.status(400).json({ message: "Invalid user id" });
+    return sendError(request, response, 400, "Invalid user id");
   }
 
   const parsed = updateAdminUserSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const existing = await prisma.adminUser.findUnique({
@@ -227,7 +223,7 @@ usersRouter.patch("/:id", async (request, response) => {
   });
 
   if (!existing) {
-    return response.status(404).json({ message: "User not found" });
+    return sendError(request, response, 404, "User not found");
   }
 
   const updated = await prisma.adminUser.update({
@@ -260,11 +256,11 @@ usersRouter.delete("/:id", async (request, response) => {
   const userId = Number(request.params.id);
 
   if (!Number.isInteger(userId) || userId <= 0) {
-    return response.status(400).json({ message: "Invalid user id" });
+    return sendError(request, response, 400, "Invalid user id");
   }
 
   if (request.user?.id === userId) {
-    return response.status(409).json({ message: "You cannot delete your own active account" });
+    return sendError(request, response, 409, "You cannot delete your own active account");
   }
 
   const existing = await prisma.adminUser.findUnique({
@@ -272,7 +268,7 @@ usersRouter.delete("/:id", async (request, response) => {
   });
 
   if (!existing) {
-    return response.status(404).json({ message: "User not found" });
+    return sendError(request, response, 404, "User not found");
   }
 
   if (existing.role === "SUPER_ADMIN") {
@@ -284,9 +280,12 @@ usersRouter.delete("/:id", async (request, response) => {
     });
 
     if (superAdminCount <= 1) {
-      return response
-        .status(409)
-        .json({ message: "Cannot delete the last active super admin account" });
+      return sendError(
+        request,
+        response,
+        409,
+        "Cannot delete the last active super admin account"
+      );
     }
   }
 

@@ -4,6 +4,7 @@ import { prisma } from "../config/prisma";
 import { requireAuth, requireRoles } from "../middleware/auth";
 import { recordAudit } from "../services/audit";
 import { mapDoctor } from "../utils/mappers";
+import { sendError, sendValidationError } from "../utils/http";
 import { doctorInputSchema, doctorUpdateSchema } from "../validation/doctor";
 
 const parseId = (value: string) => {
@@ -42,7 +43,7 @@ adminDoctorsRouter.get("/:id", async (request, response) => {
   const doctorId = parseId(request.params.id);
 
   if (!doctorId) {
-    return response.status(400).json({ message: "Doctor id must be a positive integer" });
+    return sendError(request, response, 400, "Doctor id must be a positive integer");
   }
 
   const doctor = await prisma.doctor.findUnique({
@@ -50,7 +51,7 @@ adminDoctorsRouter.get("/:id", async (request, response) => {
   });
 
   if (!doctor) {
-    return response.status(404).json({ message: "Doctor not found" });
+    return sendError(request, response, 404, "Doctor not found");
   }
 
   const payload: DoctorResponse = {
@@ -64,10 +65,7 @@ adminDoctorsRouter.post("/", async (request, response) => {
   const parsed = doctorInputSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const existing = await prisma.doctor.findUnique({
@@ -75,7 +73,7 @@ adminDoctorsRouter.post("/", async (request, response) => {
   });
 
   if (existing) {
-    return response.status(409).json({ message: "A doctor with this email already exists" });
+    return sendError(request, response, 409, "A doctor with this email already exists");
   }
 
   const doctor = await prisma.doctor.create({
@@ -111,16 +109,13 @@ adminDoctorsRouter.patch("/:id", async (request, response) => {
   const doctorId = parseId(request.params.id);
 
   if (!doctorId) {
-    return response.status(400).json({ message: "Doctor id must be a positive integer" });
+    return sendError(request, response, 400, "Doctor id must be a positive integer");
   }
 
   const parsed = doctorUpdateSchema.safeParse(request.body);
 
   if (!parsed.success) {
-    return response.status(400).json({
-      message: "Validation failed",
-      details: parsed.error.issues.map((issue) => issue.message)
-    });
+    return sendValidationError(request, response, parsed.error);
   }
 
   const existing = await prisma.doctor.findUnique({
@@ -128,7 +123,7 @@ adminDoctorsRouter.patch("/:id", async (request, response) => {
   });
 
   if (!existing) {
-    return response.status(404).json({ message: "Doctor not found" });
+    return sendError(request, response, 404, "Doctor not found");
   }
 
   if (parsed.data.email && parsed.data.email !== existing.email) {
@@ -137,7 +132,7 @@ adminDoctorsRouter.patch("/:id", async (request, response) => {
     });
 
     if (conflict) {
-      return response.status(409).json({ message: "A doctor with this email already exists" });
+      return sendError(request, response, 409, "A doctor with this email already exists");
     }
   }
 
@@ -172,7 +167,7 @@ adminDoctorsRouter.delete("/:id", async (request, response) => {
   const doctorId = parseId(request.params.id);
 
   if (!doctorId) {
-    return response.status(400).json({ message: "Doctor id must be a positive integer" });
+    return sendError(request, response, 400, "Doctor id must be a positive integer");
   }
 
   const existing = await prisma.doctor.findUnique({
@@ -180,7 +175,7 @@ adminDoctorsRouter.delete("/:id", async (request, response) => {
   });
 
   if (!existing) {
-    return response.status(404).json({ message: "Doctor not found" });
+    return sendError(request, response, 404, "Doctor not found");
   }
 
   const deleted = await prisma.doctor.delete({
