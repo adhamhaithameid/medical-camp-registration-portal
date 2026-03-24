@@ -1,115 +1,139 @@
-# Hospital Management System - Project Knowledge
+# Medical Camp Registration Portal - Project Knowledge
 
-## 1. Project Overview
-This project is now a full **Hospital Management System (HMS)** implemented as a TypeScript monorepo.
+## Overview
+This monorepo implements a full-stack Medical Camp Registration Portal using:
+- `client/`: React + Vite + TypeScript
+- `server/`: Express + TypeScript + Prisma + SQLite
+- `shared/`: shared TypeScript contracts
 
-Core software design goals applied:
-- **Architecture**: clear frontend/backend/shared separation.
-- **Modularity**: each business module has its own routes, validation, and UI page.
-- **Low Coupling / High Cohesion**: route modules depend on shared contracts and auth middleware, while keeping business logic scoped to the relevant feature.
+The implementation includes:
+- Public camp browsing and registration
+- Capacity visibility and automatic waitlisting when camps are full
+- Confirmation-code based registration lookup/edit/cancel
+- Admin authentication with role-based access control (`SUPER_ADMIN`, `STAFF`)
+- Admin registration management with search, filters, pagination, CSV export, and waitlist promotion
+- Admin camp CRUD and deactivation
+- Notification logging for email/SMS delivery attempts
+- Production hardening (rate limiting, request logging, audit logging)
+- CI pipeline and enforced coverage thresholds
 
-## 2. System Modules and Responsibilities
+## Architecture
 
-### Authentication Module
-- User Registration
-- Login
-- Logout
-- Session Status
+### Backend (Express API)
+- **Routing modules**
+  - `routes/auth.ts`: admin login/logout/status + super-admin user management
+  - `routes/camps.ts`: public camps + admin camp CRUD/deactivate
+  - `routes/registrations.ts`: public registration lifecycle + admin registration tools
+- **Middleware**
+  - Cookie/JWT auth middleware (`middleware/auth.ts`)
+  - Global error handler (`middleware/error-handler.ts`)
+  - Rate limiting (`express-rate-limit`) and request logging (`morgan`) in app bootstrap
+- **Services**
+  - `services/audit.ts`: writes audit events to `AuditLog`
+  - `services/notifications.ts`: sends/logs notification events across email/SMS channels
+- **Validation**
+  - Zod schemas for auth, camp payloads, registration payloads, and admin filters
 
-### Patient Management Module
-- Add Patient
-- Update Patient Info
-- View Patient History
-- Soft Delete Patient
+### Frontend (React SPA)
+- Public pages:
+  - Home, Camp Details, Registration, Registration Management, Contact
+- Admin pages:
+  - Admin Login
+  - Admin Registrations (search/filter/pagination/export/promote)
+  - Admin Camps (create/edit/deactivate)
+- Auth state is managed through `AuthProvider` with protected route gating by role.
 
-### Doctor Management Module
-- Add Doctor
-- View Doctor Profile
-- Assign/Update Specialization
-- View/Update Schedule
+## Data Model (Prisma)
 
-### Appointment Module
-- Book Appointment
-- Cancel Appointment
-- Reschedule Appointment
-- View Appointments
+### `AdminUser`
+- `id`, `username`, `passwordHash`, `role`, `isActive`, timestamps
 
-### Billing Module
-- Calculate Total Cost
-- Generate Invoice
-- Process Payment
-- View Billing History
+### `Camp`
+- `id`, `name`, `date`, `location`, `description`, `capacity`, `isActive`, timestamps
 
-## 3. Technology Stack
-- **Monorepo**: pnpm workspace (`client`, `server`, `shared`)
-- **Frontend**: React + Vite + TypeScript + React Router
-- **Backend**: Node.js + Express + TypeScript
-- **Database/ORM**: SQLite + Prisma
-- **Validation**: Zod
-- **Authentication**: JWT in HttpOnly cookie (`hms_auth_token`)
-- **Tests**:
-  - Server: Vitest + Supertest
-  - Client: Vitest + Testing Library
-  - E2E: Playwright
-- **Containerization**: Dockerfile + docker-compose
+### `Registration`
+- `id`, participant fields (`fullName`, `age`, `contactNumber`, `email`)
+- `campId`, `status` (`CONFIRMED`, `WAITLISTED`, `CANCELLED`)
+- `confirmationCode`, `isActive`, `cancelledAt`, timestamps
 
-## 4. Repository Structure
-- `client/`: HMS UI pages and route protection
-- `server/`: Express API, Prisma schema, module routes, seed, tests
-- `shared/`: Shared TypeScript data contracts
-- `docs/`: Project documentation
-- `e2e/`: Browser-level flow tests
+### `NotificationLog`
+- Per-attempt notification records for registration events:
+  - channel (`EMAIL`/`SMS`)
+  - event (`REGISTERED`, `UPDATED`, `CANCELLED`, `PROMOTED`, `WAITLISTED`)
+  - status (`SENT`, `FAILED`, `SKIPPED`)
 
-## 5. API Map
+### `AuditLog`
+- Tracks sensitive admin actions with actor, action, entity, request metadata, and details payload.
 
-### Health
+## API Map
+
+### Public
 - `GET /api/health`
+- `GET /api/camps`
+- `GET /api/camps/:id`
+- `POST /api/registrations`
+- `POST /api/registrations/lookup`
+- `GET /api/registrations/:confirmationCode`
+- `PATCH /api/registrations/:confirmationCode`
+- `DELETE /api/registrations/:confirmationCode`
 
 ### Auth
-- `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 - `GET /api/auth/status`
 
-### Patients
-- `GET /api/patients`
-- `POST /api/patients`
-- `PUT /api/patients/:id`
-- `GET /api/patients/:id/history`
-- `DELETE /api/patients/:id` (soft delete)
+### Admin
+- `GET /api/admin/camps`
+- `POST /api/admin/camps` (`SUPER_ADMIN`)
+- `PATCH /api/admin/camps/:id` (`SUPER_ADMIN`)
+- `POST /api/admin/camps/:id/deactivate` (`SUPER_ADMIN`)
+- `GET /api/admin/registrations` (`STAFF` or `SUPER_ADMIN`)
+- `GET /api/admin/registrations/export.csv` (`STAFF` or `SUPER_ADMIN`)
+- `PATCH /api/admin/registrations/:id/promote` (`STAFF` or `SUPER_ADMIN`)
+- `GET /api/admin/registrations/:id/notifications` (`STAFF` or `SUPER_ADMIN`)
+- `GET /api/admin/users` (`SUPER_ADMIN`)
+- `POST /api/admin/users` (`SUPER_ADMIN`)
+- `PATCH /api/admin/users/:id` (`SUPER_ADMIN`)
 
-### Doctors
-- `GET /api/doctors`
-- `POST /api/doctors`
-- `GET /api/doctors/:id`
-- `PATCH /api/doctors/:id/specialization`
-- `PATCH /api/doctors/:id/schedule`
-- `GET /api/doctors/:id/schedule`
+## Business Rules Implemented
 
-### Appointments
-- `GET /api/appointments`
-- `POST /api/appointments`
-- `PATCH /api/appointments/:id/cancel`
-- `PATCH /api/appointments/:id/reschedule`
+### Capacity + Waitlist
+- Remaining seats are shown in public and admin views.
+- New registration becomes:
+  - `CONFIRMED` if confirmed count < capacity
+  - `WAITLISTED` if camp is full
 
-### Billing
-- `POST /api/billing/calculate`
-- `POST /api/billing/invoices`
-- `POST /api/billing/invoices/:id/pay`
-- `GET /api/billing/history`
+### Duplicate Registration Protection
+- Duplicate active registration for the same `contactNumber + campId` is blocked.
 
-## 6. Data Model (Prisma)
-- `User`: platform users and roles
-- `Patient`: demographic + medical history + soft delete flags
-- `Doctor`: profile, specialization, schedule
-- `Appointment`: booking lifecycle status
-- `Invoice`: billing summary and payment state
-- `InvoiceItem`: line items for cost calculation
+### Participant Edit/Cancel
+- Participants manage registrations via `confirmationCode`.
+- Cancellation marks registration inactive and status `CANCELLED`.
 
-## 7. Shared Contracts
-Shared request/response contracts live in `shared/src/contracts.ts` and are imported by both client and server.
+### Admin Promotion
+- Waitlisted registration can be promoted only when seats are available.
 
-## 8. Setup and Run
+### Role-Based Admin
+- `SUPER_ADMIN`: full management (users + camps + all staff abilities)
+- `STAFF`: registrations and reporting access (view/filter/export/promote)
+
+## Notifications
+- Registration events trigger email and SMS delivery attempts.
+- Actual sending is environment-driven:
+  - SMTP vars for email
+  - Twilio vars for SMS
+- Every attempt is persisted in `NotificationLog`.
+
+## Production Hardening
+- Global rate limiting
+- HTTP request logging
+- Persistent audit logs for admin actions
+- CI workflow at `.github/workflows/ci.yml`
+- Coverage thresholds enforced in:
+  - `server/vitest.config.ts`
+  - `client/vite.config.ts`
+
+## Setup and Run
 
 ### Local
 1. `pnpm install`
@@ -118,11 +142,13 @@ Shared request/response contracts live in `shared/src/contracts.ts` and are impo
 4. `pnpm db:seed`
 5. `pnpm dev`
 
-Frontend: `http://localhost:5173`
-Backend: `http://localhost:4000`
+App URLs:
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:4000`
 
 ### Tests
 - `pnpm test`
+- `pnpm test:coverage`
 - `pnpm test:e2e`
 
 ### Build
@@ -131,22 +157,12 @@ Backend: `http://localhost:4000`
 ### Docker
 - `docker compose up --build`
 
-## 9. Default Seed User
-- Email: `admin@hms.local`
-- Password: `admin12345`
-- Role: `ADMIN`
+## Seeded Credentials
+- Super Admin: `admin / admin12345`
+- Staff: `staff / staff12345`
 
-Configured through:
-- `DEFAULT_USER_FULL_NAME`
-- `DEFAULT_USER_EMAIL`
-- `DEFAULT_USER_PASSWORD`
-
-## 10. Testing Checklist
-- Auth register/login/logout/status
-- Protected endpoint access control
-- Patient CRUD-style flow with soft delete + history
-- Doctor create/profile/specialization/schedule
-- Appointment book/cancel/reschedule/list
-- Billing calculate/invoice/payment/history
-- Frontend route guarding and core form behavior
-- E2E login + module workflows
+Configured through env keys:
+- `DEFAULT_SUPER_ADMIN_USERNAME`
+- `DEFAULT_SUPER_ADMIN_PASSWORD`
+- `DEFAULT_STAFF_USERNAME`
+- `DEFAULT_STAFF_PASSWORD`
