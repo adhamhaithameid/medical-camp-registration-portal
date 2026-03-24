@@ -4,9 +4,12 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminCampsPage } from "./pages/AdminCampsPage";
 import { AdminLoginPage } from "./pages/AdminLoginPage";
 import { AdminRegistrationsPage } from "./pages/AdminRegistrationsPage";
+import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { CampDetailsPage } from "./pages/CampDetailsPage";
 import { ContactPage } from "./pages/ContactPage";
+import { DoctorsPage } from "./pages/DoctorsPage";
 import { HomePage } from "./pages/HomePage";
+import { PatientsPage } from "./pages/PatientsPage";
 import { RegistrationLookupPage } from "./pages/RegistrationLookupPage";
 import { RegistrationPage } from "./pages/RegistrationPage";
 
@@ -23,8 +26,11 @@ export const AppRoutes = () => {
 
         <Route element={<ProtectedRoute />}>
           <Route path="admin/registrations" element={<AdminRegistrationsPage />} />
+          <Route path="admin/patients" element={<PatientsPage />} />
+          <Route path="admin/doctors" element={<DoctorsPage />} />
           <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]} />}>
             <Route path="admin/camps" element={<AdminCampsPage />} />
+            <Route path="admin/users" element={<AdminUsersPage />} />
           </Route>
         </Route>
 

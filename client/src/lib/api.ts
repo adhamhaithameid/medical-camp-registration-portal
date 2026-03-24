@@ -1,12 +1,21 @@
 import type {
   AdminRegistrationsResponse,
+  AdminUser,
+  AdminUserResponse,
+  AdminUsersResponse,
   AuthResult,
   AuthStatusResponse,
   CampInput,
   CampResponse,
   CampsResponse,
   CreateAdminUserInput,
+  DoctorInput,
+  DoctorResponse,
+  DoctorsResponse,
   LoginInput,
+  PatientInput,
+  PatientResponse,
+  PatientsResponse,
   RegistrationInput,
   RegistrationLookupResponse,
   RegistrationResponse,
@@ -170,15 +179,60 @@ export const api = {
       `/admin/registrations/${id}/notifications`
     ),
 
-  getAdminUsers: () => request<{ users: Array<Record<string, unknown>> }>("/admin/users"),
+  getAdminUsers: () => request<AdminUsersResponse>("/admin/users"),
+  getAdminUserById: (id: number) => request<AdminUserResponse>(`/admin/users/${id}`),
   createAdminUser: (payload: CreateAdminUserInput) =>
-    request<{ user: Record<string, unknown> }>("/admin/users", {
+    request<AdminUserResponse>("/admin/users", {
       method: "POST",
       body: JSON.stringify(payload)
     }),
   updateAdminUser: (id: number, payload: UpdateAdminUserInput) =>
-    request<{ user: Record<string, unknown> }>(`/admin/users/${id}`, {
+    request<AdminUserResponse>(`/admin/users/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload)
+    }),
+  deleteAdminUser: (id: number) =>
+    request<AdminUserResponse>(`/admin/users/${id}`, {
+      method: "DELETE"
+    }),
+
+  getPatients: (search?: string) =>
+    request<PatientsResponse>(
+      `/admin/patients${search ? toQueryString({ search }) : ""}`
+    ),
+  getPatientById: (id: number) => request<PatientResponse>(`/admin/patients/${id}`),
+  createPatient: (payload: PatientInput) =>
+    request<PatientResponse>("/admin/patients", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  updatePatient: (id: number, payload: Partial<PatientInput>) =>
+    request<PatientResponse>(`/admin/patients/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }),
+  deletePatient: (id: number) =>
+    request<PatientResponse>(`/admin/patients/${id}`, {
+      method: "DELETE"
+    }),
+
+  getDoctors: (search?: string) =>
+    request<DoctorsResponse>(
+      `/admin/doctors${search ? toQueryString({ search }) : ""}`
+    ),
+  getDoctorById: (id: number) => request<DoctorResponse>(`/admin/doctors/${id}`),
+  createDoctor: (payload: DoctorInput) =>
+    request<DoctorResponse>("/admin/doctors", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  updateDoctor: (id: number, payload: Partial<DoctorInput>) =>
+    request<DoctorResponse>(`/admin/doctors/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }),
+  deleteDoctor: (id: number) =>
+    request<DoctorResponse>(`/admin/doctors/${id}`, {
+      method: "DELETE"
     })
 };

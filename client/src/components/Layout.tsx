@@ -3,8 +3,8 @@ import { useAuth } from "../context/AuthContext";
 
 const publicLinks = [
   { to: "/", label: "Home", end: true },
-  { to: "/register", label: "Register" },
-  { to: "/registration/manage", label: "Manage Registration" },
+  { to: "/register", label: "Camp Register" },
+  { to: "/registration/manage", label: "Camp Manage" },
   { to: "/contact", label: "Contact" }
 ];
 
@@ -21,8 +21,8 @@ export const Layout = () => {
     <div className="app-shell">
       <header className="site-header">
         <div className="brand-block">
-          <p className="badge">MCAMP</p>
-          <h1>Medical Camp Registration Portal</h1>
+          <p className="badge">HMS</p>
+          <h1>Hospital Management System</h1>
         </div>
 
         <nav className="main-nav" aria-label="Main navigation">
@@ -46,17 +46,43 @@ export const Layout = () => {
                   isActive ? "nav-link nav-link-active" : "nav-link"
                 }
               >
-                Admin Registrations
+                Registrations
+              </NavLink>
+              <NavLink
+                to="/admin/patients"
+                className={({ isActive }) =>
+                  isActive ? "nav-link nav-link-active" : "nav-link"
+                }
+              >
+                Patients
+              </NavLink>
+              <NavLink
+                to="/admin/doctors"
+                className={({ isActive }) =>
+                  isActive ? "nav-link nav-link-active" : "nav-link"
+                }
+              >
+                Doctors
               </NavLink>
               {auth.role === "SUPER_ADMIN" && (
-                <NavLink
-                  to="/admin/camps"
-                  className={({ isActive }) =>
-                    isActive ? "nav-link nav-link-active" : "nav-link"
-                  }
-                >
-                  Camp Management
-                </NavLink>
+                <>
+                  <NavLink
+                    to="/admin/camps"
+                    className={({ isActive }) =>
+                      isActive ? "nav-link nav-link-active" : "nav-link"
+                    }
+                  >
+                    Camps
+                  </NavLink>
+                  <NavLink
+                    to="/admin/users"
+                    className={({ isActive }) =>
+                      isActive ? "nav-link nav-link-active" : "nav-link"
+                    }
+                  >
+                    Admins
+                  </NavLink>
+                </>
               )}
             </>
           )}

@@ -39,18 +39,21 @@ export const HomePage = () => {
   return (
     <div>
       <section className="hero-section">
-        <p className="eyebrow">Community Healthcare Camps</p>
-        <h2>Find A Medical Camp And Register In Minutes</h2>
+        <p className="eyebrow">Hospital Operations + Camp Operations</p>
+        <h2>Complete Hospital Management System</h2>
         <p>
-          Browse active camps, see live seat availability, and register with confirmation code
-          support for future updates or cancellation.
+          Manage patients, doctors, and admin users with full CRUD capabilities while keeping the
+          medical camp registration workflows active in the same platform.
         </p>
         <div className="hero-actions">
-          <Link className="btn btn-primary" to="/register">
-            Register Now
+          <Link className="btn btn-primary" to="/admin/patients">
+            Open Patients Module
           </Link>
-          <Link className="btn btn-secondary" to="/registration/manage">
-            Manage Existing Registration
+          <Link className="btn btn-secondary" to="/admin/doctors">
+            Open Doctors Module
+          </Link>
+          <Link className="btn btn-secondary" to="/admin/users">
+            Open Admins Module
           </Link>
         </div>
       </section>
