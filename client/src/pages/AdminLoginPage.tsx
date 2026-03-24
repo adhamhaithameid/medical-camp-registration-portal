@@ -35,9 +35,9 @@ export const AdminLoginPage = () => {
   };
 
   return (
-    <section className="form-panel">
+    <section className="workspace-page form-panel">
       <h2>Admin Login</h2>
-      <p>
+      <p className="muted-text">
         Default users: <strong>admin / admin12345</strong> (super admin),{" "}
         <strong>staff / staff12345</strong> (staff)
       </p>

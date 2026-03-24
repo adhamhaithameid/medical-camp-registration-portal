@@ -78,6 +78,31 @@ export const AdminRegistrationsPage = () => {
     }
   };
 
+  const resetFilters = async () => {
+    setFilters({
+      search: "",
+      campId: "",
+      status: "",
+      dateFrom: "",
+      dateTo: ""
+    });
+    setPage(1);
+    try {
+      setIsLoading(true);
+      const response = await api.getAdminRegistrations({
+        page: 1,
+        pageSize: PAGE_SIZE
+      });
+      setRows(response.registrations);
+      setTotalPages(response.meta.totalPages);
+      setTotal(response.meta.total);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to reset filters");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleExport = async () => {
     try {
       const csv = await api.exportAdminRegistrationsCsv(toQuery());
@@ -107,9 +132,11 @@ export const AdminRegistrationsPage = () => {
   };
 
   return (
-    <section>
+    <section className="workspace-page">
       <h2>Admin Registrations</h2>
-      <p>Search and filter registrations, promote waitlist entries, and export CSV reports.</p>
+      <p className="muted-text">
+        Search and filter registrations, promote waitlist entries, and export CSV reports.
+      </p>
 
       {errorMessage && <p className="error-text">{errorMessage}</p>}
       {successMessage && <p className="success-text">{successMessage}</p>}
@@ -189,6 +216,9 @@ export const AdminRegistrationsPage = () => {
         <button className="btn btn-primary" type="button" onClick={handleApplyFilters}>
           Apply Filters
         </button>
+        <button className="btn btn-ghost" type="button" onClick={resetFilters}>
+          Reset
+        </button>
         <button className="btn btn-secondary" type="button" onClick={handleExport}>
           Export CSV
         </button>
@@ -222,7 +252,19 @@ export const AdminRegistrationsPage = () => {
                   <td>{row.contactNumber}</td>
                   <td>{row.campName ?? row.campId}</td>
                   <td>{row.campDate ? new Date(row.campDate).toLocaleDateString() : "-"}</td>
-                  <td>{row.status}</td>
+                  <td>
+                    <span
+                      className={
+                        row.status === "CONFIRMED"
+                          ? "status-chip status-chip-green"
+                          : row.status === "WAITLISTED"
+                            ? "status-chip status-chip-amber"
+                            : "status-chip status-chip-gray"
+                      }
+                    >
+                      {row.status}
+                    </span>
+                  </td>
                   <td>{row.confirmationCode}</td>
                   <td>{new Date(row.createdAt).toLocaleString()}</td>
                   <td>

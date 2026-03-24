@@ -58,7 +58,7 @@ export const CampDetailsPage = () => {
   }
 
   return (
-    <section className="detail-panel">
+    <section className="workspace-page detail-panel">
       <h2>{camp.name}</h2>
       <p>
         <strong>Date:</strong> {new Date(camp.date).toLocaleString()}
@@ -71,11 +71,17 @@ export const CampDetailsPage = () => {
         <strong>Capacity:</strong> {camp.capacity}
       </p>
       <p>
-        <strong>Confirmed:</strong> {camp.confirmedCount} | <strong>Waitlist:</strong>{" "}
-        {camp.waitlistCount}
+        <strong>Confirmed:</strong> {camp.confirmedCount} | <strong>Waitlist:</strong> {camp.waitlistCount}
       </p>
       <p>
-        <strong>Remaining Seats:</strong> {camp.remainingSeats}
+        <strong>Remaining Seats:</strong>{" "}
+        <span
+          className={
+            camp.remainingSeats > 0 ? "status-chip status-chip-green" : "status-chip status-chip-amber"
+          }
+        >
+          {camp.remainingSeats}
+        </span>
       </p>
 
       <div className="hero-actions">

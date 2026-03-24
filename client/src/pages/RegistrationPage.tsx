@@ -123,9 +123,11 @@ export const RegistrationPage = () => {
   }
 
   return (
-    <section className="form-panel">
+    <section className="workspace-page form-panel">
       <h2>Camp Registration</h2>
-      <p>When a camp reaches capacity, new registrations are automatically waitlisted.</p>
+      <p className="muted-text">
+        When a camp reaches capacity, new registrations are automatically waitlisted.
+      </p>
 
       {selectedCamp && (
         <p className="muted-text">
@@ -137,8 +139,16 @@ export const RegistrationPage = () => {
 
       {successRegistration && (
         <div className="success-box">
-          <p>
-            Registration {successRegistration.status === "WAITLISTED" ? "waitlisted" : "confirmed"}.
+          <p className="inline-actions">
+            <span
+              className={
+                successRegistration.status === "WAITLISTED"
+                  ? "status-chip status-chip-amber"
+                  : "status-chip status-chip-green"
+              }
+            >
+              {successRegistration.status}
+            </span>
           </p>
           <p>
             Your confirmation code: <strong>{successRegistration.confirmationCode}</strong>

@@ -89,14 +89,16 @@ export const RegistrationLookupPage = () => {
   };
 
   return (
-    <section>
+    <section className="workspace-page">
       <h2>Manage Registration</h2>
-      <p>Use your confirmation code to view, edit, or cancel your registration.</p>
+      <p className="muted-text">
+        Use your confirmation code to view, edit, or cancel your registration.
+      </p>
 
       {errorMessage && <p className="error-text">{errorMessage}</p>}
       {successMessage && <p className="success-text">{successMessage}</p>}
 
-      <div className="inline-actions">
+      <div className="toolbar">
         <input
           aria-label="Confirmation Code"
           placeholder="Enter confirmation code"
@@ -112,7 +114,18 @@ export const RegistrationLookupPage = () => {
         <section className="detail-panel">
           <h3>Registration Details</h3>
           <p>
-            <strong>Status:</strong> {lookupResult.registration.status}
+            <strong>Status:</strong>{" "}
+            <span
+              className={
+                lookupResult.registration.status === "CONFIRMED"
+                  ? "status-chip status-chip-green"
+                  : lookupResult.registration.status === "WAITLISTED"
+                    ? "status-chip status-chip-amber"
+                    : "status-chip status-chip-gray"
+              }
+            >
+              {lookupResult.registration.status}
+            </span>
           </p>
           <p>
             <strong>Camp:</strong> {lookupResult.camp.name} -{" "}

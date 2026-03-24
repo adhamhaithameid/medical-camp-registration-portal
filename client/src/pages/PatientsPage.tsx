@@ -103,6 +103,11 @@ export const PatientsPage = () => {
   };
 
   const handleDelete = async (id: number) => {
+    const confirmed = window.confirm("Delete this patient record permanently?");
+    if (!confirmed) {
+      return;
+    }
+
     try {
       setErrorMessage(null);
       setSuccessMessage(null);
@@ -119,24 +124,38 @@ export const PatientsPage = () => {
   };
 
   return (
-    <section>
+    <section className="workspace-page">
       <h2>Patients Management</h2>
-      <p>Create, read, update, and delete patient records.</p>
+      <p className="muted-text">
+        Maintain complete patient records with fast search and structured updates.
+      </p>
 
       {errorMessage && <p className="error-text">{errorMessage}</p>}
       {successMessage && <p className="success-text">{successMessage}</p>}
 
-      <div className="inline-actions">
+      <div className="toolbar">
         <input
           aria-label="Search Patients"
           placeholder="Search by name/contact/email"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
+        <button
+          className="btn btn-ghost"
+          type="button"
+          onClick={() => {
+            setSearch("");
+            void load();
+          }}
+        >
+          Clear
+        </button>
         <button className="btn btn-secondary" type="button" onClick={handleSearch}>
           Search
         </button>
       </div>
+
+      <p className="muted-text">Total patients: {patients.length}</p>
 
       <form className="form-grid" onSubmit={handleSubmit} noValidate>
         <label htmlFor="patientName">

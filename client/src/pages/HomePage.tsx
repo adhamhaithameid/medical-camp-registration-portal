@@ -36,29 +36,47 @@ export const HomePage = () => {
     };
   }, []);
 
+  const totalRemainingSeats = camps.reduce((sum, camp) => sum + camp.remainingSeats, 0);
+  const campsWithWaitlist = camps.filter((camp) => camp.waitlistCount > 0).length;
+
   return (
-    <div>
+    <section className="workspace-page">
       <section className="hero-section">
         <p className="eyebrow">Hospital Operations + Camp Operations</p>
         <h2>Complete Hospital Management System</h2>
         <p>
-          Manage patients, doctors, and admin users with full CRUD capabilities while keeping the
-          medical camp registration workflows active in the same platform.
+          Operate all core modules from one secure workspace with structured records, access
+          control, and real-time camp capacity visibility.
         </p>
         <div className="hero-actions">
           <Link className="btn btn-primary" to="/admin/patients">
-            Open Patients Module
+            Manage Patients
           </Link>
           <Link className="btn btn-secondary" to="/admin/doctors">
-            Open Doctors Module
+            Manage Doctors
           </Link>
           <Link className="btn btn-secondary" to="/admin/users">
-            Open Admins Module
+            Manage Admins
           </Link>
         </div>
       </section>
 
       {errorMessage && <p className="error-text">{errorMessage}</p>}
+
+      <section className="kpi-grid" aria-label="Operations overview">
+        <article className="kpi-item">
+          <p className="kpi-label">Active Camps</p>
+          <p className="kpi-value">{camps.length}</p>
+        </article>
+        <article className="kpi-item">
+          <p className="kpi-label">Total Remaining Seats</p>
+          <p className="kpi-value">{totalRemainingSeats}</p>
+        </article>
+        <article className="kpi-item">
+          <p className="kpi-label">Camps With Waitlist</p>
+          <p className="kpi-value">{campsWithWaitlist}</p>
+        </article>
+      </section>
 
       {isLoading ? (
         <p>Loading camps...</p>
@@ -76,7 +94,7 @@ export const HomePage = () => {
               {camp.remainingSeats === 0 ? (
                 <p className="waitlist-tag">Camp Full - New signups join waitlist</p>
               ) : (
-                <p className="success-text">Seats available</p>
+                <p className="status-chip status-chip-green">Seats available</p>
               )}
               <div className="hero-actions">
                 <Link className="btn btn-secondary" to={`/camps/${camp.id}`}>
@@ -91,6 +109,6 @@ export const HomePage = () => {
           {camps.length === 0 && <p>No active camps found.</p>}
         </section>
       )}
-    </div>
+    </section>
   );
 };

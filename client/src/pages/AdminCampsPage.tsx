@@ -105,6 +105,11 @@ export const AdminCampsPage = () => {
   };
 
   const deactivate = async (campId: number) => {
+    const confirmed = window.confirm("Deactivate this camp?");
+    if (!confirmed) {
+      return;
+    }
+
     try {
       setErrorMessage(null);
       setSuccessMessage(null);
@@ -117,12 +122,16 @@ export const AdminCampsPage = () => {
   };
 
   return (
-    <section>
+    <section className="workspace-page">
       <h2>Admin Camp Management</h2>
-      <p>Create, edit, and deactivate camps with live capacity visibility.</p>
+      <p className="muted-text">
+        Create, edit, and deactivate camps with live capacity visibility.
+      </p>
 
       {errorMessage && <p className="error-text">{errorMessage}</p>}
       {successMessage && <p className="success-text">{successMessage}</p>}
+
+      <p className="muted-text">Total camps: {camps.length}</p>
 
       <form className="form-grid" onSubmit={handleSubmit} noValidate>
         <label htmlFor="campName">

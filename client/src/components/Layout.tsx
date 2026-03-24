@@ -23,6 +23,9 @@ export const Layout = () => {
         <div className="brand-block">
           <p className="badge">HMS</p>
           <h1>Hospital Management System</h1>
+          <p className="header-subtitle">
+            Unified operations for patient, doctor, admin, and camp workflows.
+          </p>
         </div>
 
         <nav className="main-nav" aria-label="Main navigation">
@@ -91,7 +94,7 @@ export const Layout = () => {
         <div className="auth-block">
           {auth.authenticated && auth.user ? (
             <>
-              <p>
+              <p className="session-pill">
                 {auth.user.username} ({auth.user.role})
               </p>
               <button className="btn btn-secondary" onClick={handleLogout} type="button">

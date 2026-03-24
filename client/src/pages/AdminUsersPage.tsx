@@ -10,6 +10,7 @@ const initialCreateForm = {
 
 export const AdminUsersPage = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [search, setSearch] = useState("");
   const [createForm, setCreateForm] = useState(initialCreateForm);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -80,6 +81,11 @@ export const AdminUsersPage = () => {
   };
 
   const handleDelete = async (user: AdminUser) => {
+    const confirmed = window.confirm(`Delete admin user "${user.username}"?`);
+    if (!confirmed) {
+      return;
+    }
+
     try {
       await api.deleteAdminUser(user.id);
       setSuccessMessage("Admin user deleted.");
@@ -89,10 +95,14 @@ export const AdminUsersPage = () => {
     }
   };
 
+  const filteredUsers = users.filter((user) =>
+    [user.username, user.role].join(" ").toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <section>
+    <section className="workspace-page">
       <h2>Admins Management</h2>
-      <p>Complete CRUD for admin accounts (super admin only).</p>
+      <p className="muted-text">Corporate access control for admin accounts (super admin only).</p>
 
       {errorMessage && <p className="error-text">{errorMessage}</p>}
       {successMessage && <p className="success-text">{successMessage}</p>}
@@ -137,6 +147,20 @@ export const AdminUsersPage = () => {
         </button>
       </form>
 
+      <div className="toolbar">
+        <input
+          aria-label="Search Admins"
+          placeholder="Search by username or role"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <button className="btn btn-ghost" type="button" onClick={() => setSearch("")}>
+          Clear
+        </button>
+      </div>
+
+      <p className="muted-text">Total admins: {filteredUsers.length}</p>
+
       {isLoading ? (
         <p>Loading admins...</p>
       ) : (
@@ -153,7 +177,7 @@ export const AdminUsersPage = () => {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <tr key={user.id}>
                   <td>{user.id}</td>
                   <td>{user.username}</td>
@@ -188,7 +212,7 @@ export const AdminUsersPage = () => {
                   </td>
                 </tr>
               ))}
-              {users.length === 0 && (
+              {filteredUsers.length === 0 && (
                 <tr>
                   <td colSpan={6}>No admin users found.</td>
                 </tr>
