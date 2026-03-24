@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import type { Camp, RegistrationRecord, RegistrationStatus } from "@medical-camp/shared";
+import { ErrorCallout } from "../components/ErrorCallout";
+import { useToast } from "../context/ToastContext";
 import { api, type AdminRegistrationsQuery } from "../lib/api";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 const PAGE_SIZE = 10;
 
 export const AdminRegistrationsPage = () => {
+  const { pushToast } = useToast();
+  const isOnline = useOnlineStatus();
   const [camps, setCamps] = useState<Camp[]>([]);
   const [rows, setRows] = useState<RegistrationRecord[]>([]);
   const [page, setPage] = useState(1);
@@ -24,8 +29,7 @@ export const AdminRegistrationsPage = () => {
     dateTo: ""
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
 
   const toQuery = (): AdminRegistrationsQuery => ({
     search: filters.search || undefined,
@@ -40,7 +44,7 @@ export const AdminRegistrationsPage = () => {
   const load = async () => {
     try {
       setIsLoading(true);
-      setErrorMessage(null);
+      setError(null);
       const [campsResponse, registrationsResponse] = await Promise.all([
         api.getAdminCamps(),
         api.getAdminRegistrations(toQuery())
@@ -49,8 +53,8 @@ export const AdminRegistrationsPage = () => {
       setRows(registrationsResponse.registrations);
       setTotalPages(registrationsResponse.meta.totalPages);
       setTotal(registrationsResponse.meta.total);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to load registrations");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +67,9 @@ export const AdminRegistrationsPage = () => {
   const handleApplyFilters = async () => {
     setPage(1);
     try {
+      if (!isOnline) {
+        throw new Error("You are offline. Reconnect before applying filters.");
+      }
       setIsLoading(true);
       const response = await api.getAdminRegistrations({
         ...toQuery(),
@@ -71,8 +78,8 @@ export const AdminRegistrationsPage = () => {
       setRows(response.registrations);
       setTotalPages(response.meta.totalPages);
       setTotal(response.meta.total);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to apply filters");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsLoading(false);
     }
@@ -88,6 +95,9 @@ export const AdminRegistrationsPage = () => {
     });
     setPage(1);
     try {
+      if (!isOnline) {
+        throw new Error("You are offline. Reconnect before resetting filters.");
+      }
       setIsLoading(true);
       const response = await api.getAdminRegistrations({
         page: 1,
@@ -96,8 +106,8 @@ export const AdminRegistrationsPage = () => {
       setRows(response.registrations);
       setTotalPages(response.meta.totalPages);
       setTotal(response.meta.total);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to reset filters");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsLoading(false);
     }
@@ -105,6 +115,9 @@ export const AdminRegistrationsPage = () => {
 
   const handleExport = async () => {
     try {
+      if (!isOnline) {
+        throw new Error("You are offline. Reconnect before exporting CSV.");
+      }
       const csv = await api.exportAdminRegistrationsCsv(toQuery());
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -113,21 +126,31 @@ export const AdminRegistrationsPage = () => {
       anchor.download = `registrations-${new Date().toISOString().slice(0, 10)}.csv`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setSuccessMessage("CSV export generated.");
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to export CSV");
+      pushToast({
+        variant: "success",
+        title: "CSV Export Ready",
+        message: "Registration report downloaded."
+      });
+    } catch (requestError) {
+      setError(requestError);
     }
   };
 
   const handlePromote = async (registrationId: number) => {
     try {
-      setErrorMessage(null);
-      setSuccessMessage(null);
+      if (!isOnline) {
+        throw new Error("You are offline. Reconnect before promotion.");
+      }
+      setError(null);
       await api.promoteRegistration(registrationId);
-      setSuccessMessage("Waitlist registration promoted.");
+      pushToast({
+        variant: "success",
+        title: "Promotion Completed",
+        message: "Waitlisted registration moved to confirmed."
+      });
       await load();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to promote registration");
+    } catch (requestError) {
+      setError(requestError);
     }
   };
 
@@ -138,8 +161,10 @@ export const AdminRegistrationsPage = () => {
         Search and filter registrations, promote waitlist entries, and export CSV reports.
       </p>
 
-      {errorMessage && <p className="error-text">{errorMessage}</p>}
-      {successMessage && <p className="success-text">{successMessage}</p>}
+      {!isOnline && (
+        <p className="warning-text">You are offline. Filtering/export/promotion is disabled.</p>
+      )}
+      <ErrorCallout error={error} onRetry={load} />
 
       <div className="form-grid">
         <label htmlFor="search">
@@ -213,13 +238,13 @@ export const AdminRegistrationsPage = () => {
       </div>
 
       <div className="inline-actions">
-        <button className="btn btn-primary" type="button" onClick={handleApplyFilters}>
+        <button className="btn btn-primary" type="button" onClick={handleApplyFilters} disabled={!isOnline}>
           Apply Filters
         </button>
-        <button className="btn btn-ghost" type="button" onClick={resetFilters}>
+        <button className="btn btn-ghost" type="button" onClick={resetFilters} disabled={!isOnline}>
           Reset
         </button>
-        <button className="btn btn-secondary" type="button" onClick={handleExport}>
+        <button className="btn btn-secondary" type="button" onClick={handleExport} disabled={!isOnline}>
           Export CSV
         </button>
       </div>
@@ -273,6 +298,7 @@ export const AdminRegistrationsPage = () => {
                         className="btn btn-secondary"
                         type="button"
                         onClick={() => handlePromote(row.id)}
+                        disabled={!isOnline}
                       >
                         Promote
                       </button>

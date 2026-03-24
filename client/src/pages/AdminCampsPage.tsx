@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { Camp, CampInput } from "@medical-camp/shared";
-import { api } from "../lib/api";
+import { ErrorCallout } from "../components/ErrorCallout";
+import { FieldErrorText } from "../components/FieldErrorText";
+import { useToast } from "../context/ToastContext";
+import { api, getFieldError } from "../lib/api";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 const initialForm: CampInput = {
   name: "",
@@ -12,21 +16,22 @@ const initialForm: CampInput = {
 };
 
 export const AdminCampsPage = () => {
+  const { pushToast } = useToast();
+  const isOnline = useOnlineStatus();
   const [camps, setCamps] = useState<Camp[]>([]);
   const [form, setForm] = useState<CampInput>(initialForm);
   const [editingCampId, setEditingCampId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
 
   const load = async () => {
     try {
       setIsLoading(true);
       const response = await api.getAdminCamps();
       setCamps(response.camps);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to load camps");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsLoading(false);
     }
@@ -55,12 +60,16 @@ export const AdminCampsPage = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setErrorMessage(null);
-    setSuccessMessage(null);
+    setError(null);
+
+    if (!isOnline) {
+      setError(new Error("You are offline. Reconnect before saving camp changes."));
+      return;
+    }
 
     const validationError = validate();
     if (validationError) {
-      setErrorMessage(validationError);
+      setError(new Error(validationError));
       return;
     }
 
@@ -77,16 +86,24 @@ export const AdminCampsPage = () => {
 
       if (editingCampId) {
         await api.updateCamp(editingCampId, payload);
-        setSuccessMessage("Camp updated.");
+        pushToast({
+          variant: "success",
+          title: "Camp Updated",
+          message: "Camp details were updated."
+        });
       } else {
         await api.createCamp(payload);
-        setSuccessMessage("Camp created.");
+        pushToast({
+          variant: "success",
+          title: "Camp Created",
+          message: "New camp added successfully."
+        });
       }
 
       resetForm();
       await load();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to save camp");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsSubmitting(false);
     }
@@ -111,13 +128,19 @@ export const AdminCampsPage = () => {
     }
 
     try {
-      setErrorMessage(null);
-      setSuccessMessage(null);
+      if (!isOnline) {
+        throw new Error("You are offline. Reconnect before deactivating camps.");
+      }
+      setError(null);
       await api.deactivateCamp(campId);
-      setSuccessMessage("Camp deactivated.");
+      pushToast({
+        variant: "warning",
+        title: "Camp Deactivated",
+        message: "Camp is now inactive."
+      });
       await load();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to deactivate camp");
+    } catch (requestError) {
+      setError(requestError);
     }
   };
 
@@ -128,8 +151,8 @@ export const AdminCampsPage = () => {
         Create, edit, and deactivate camps with live capacity visibility.
       </p>
 
-      {errorMessage && <p className="error-text">{errorMessage}</p>}
-      {successMessage && <p className="success-text">{successMessage}</p>}
+      {!isOnline && <p className="warning-text">You are offline. Camp writes are disabled.</p>}
+      <ErrorCallout error={error} onRetry={load} />
 
       <p className="muted-text">Total camps: {camps.length}</p>
 
@@ -141,6 +164,7 @@ export const AdminCampsPage = () => {
             value={form.name}
             onChange={(event) => setForm((previous) => ({ ...previous, name: event.target.value }))}
           />
+          <FieldErrorText message={getFieldError(error, "name")} />
         </label>
         <label htmlFor="campDate">
           Camp Date
@@ -150,6 +174,7 @@ export const AdminCampsPage = () => {
             value={form.date}
             onChange={(event) => setForm((previous) => ({ ...previous, date: event.target.value }))}
           />
+          <FieldErrorText message={getFieldError(error, "date")} />
         </label>
         <label htmlFor="campLocation">
           Location
@@ -160,6 +185,7 @@ export const AdminCampsPage = () => {
               setForm((previous) => ({ ...previous, location: event.target.value }))
             }
           />
+          <FieldErrorText message={getFieldError(error, "location")} />
         </label>
         <label htmlFor="campCapacity">
           Capacity
@@ -172,6 +198,7 @@ export const AdminCampsPage = () => {
               setForm((previous) => ({ ...previous, capacity: Number(event.target.value) }))
             }
           />
+          <FieldErrorText message={getFieldError(error, "capacity")} />
         </label>
         <label htmlFor="campDescription">
           Description
@@ -182,6 +209,7 @@ export const AdminCampsPage = () => {
               setForm((previous) => ({ ...previous, description: event.target.value }))
             }
           />
+          <FieldErrorText message={getFieldError(error, "description")} />
         </label>
         <label className="checkbox-inline" htmlFor="campActive">
           <input
@@ -196,7 +224,7 @@ export const AdminCampsPage = () => {
         </label>
 
         <div className="inline-actions">
-          <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+          <button className="btn btn-primary" type="submit" disabled={isSubmitting || !isOnline}>
             {isSubmitting ? "Saving..." : editingCampId ? "Update Camp" : "Create Camp"}
           </button>
           {editingCampId && (
@@ -244,6 +272,7 @@ export const AdminCampsPage = () => {
                           className="btn btn-secondary"
                           type="button"
                           onClick={() => deactivate(camp.id)}
+                          disabled={!isOnline}
                         >
                           Deactivate
                         </button>

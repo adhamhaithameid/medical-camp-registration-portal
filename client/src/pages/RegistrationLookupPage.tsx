@@ -1,8 +1,14 @@
 import { useState } from "react";
 import type { RegistrationLookupResponse } from "@medical-camp/shared";
-import { api } from "../lib/api";
+import { ErrorCallout } from "../components/ErrorCallout";
+import { FieldErrorText } from "../components/FieldErrorText";
+import { useToast } from "../context/ToastContext";
+import { api, getFieldError } from "../lib/api";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 export const RegistrationLookupPage = () => {
+  const { pushToast } = useToast();
+  const isOnline = useOnlineStatus();
   const [confirmationCode, setConfirmationCode] = useState("");
   const [lookupResult, setLookupResult] = useState<RegistrationLookupResponse | null>(null);
   const [formState, setFormState] = useState({
@@ -11,8 +17,7 @@ export const RegistrationLookupPage = () => {
     contactNumber: "",
     email: ""
   });
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const syncForm = (result: RegistrationLookupResponse) => {
@@ -25,12 +30,16 @@ export const RegistrationLookupPage = () => {
   };
 
   const handleLookup = async () => {
-    setErrorMessage(null);
-    setSuccessMessage(null);
+    setError(null);
     setLookupResult(null);
 
+    if (!isOnline) {
+      setError(new Error("You are offline. Reconnect before lookup."));
+      return;
+    }
+
     if (!confirmationCode.trim()) {
-      setErrorMessage("Confirmation code is required.");
+      setError(new Error("Confirmation code is required."));
       return;
     }
 
@@ -39,8 +48,8 @@ export const RegistrationLookupPage = () => {
       const result = await api.lookupRegistration(confirmationCode.trim());
       setLookupResult(result);
       syncForm(result);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Lookup failed");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsLoading(false);
     }
@@ -52,8 +61,7 @@ export const RegistrationLookupPage = () => {
     }
 
     try {
-      setErrorMessage(null);
-      setSuccessMessage(null);
+      setError(null);
       const response = await api.updateRegistration(lookupResult.registration.confirmationCode, {
         fullName: formState.fullName.trim(),
         age: Number(formState.age),
@@ -64,9 +72,13 @@ export const RegistrationLookupPage = () => {
       const refreshed = await api.getRegistrationByCode(response.registration.confirmationCode);
       setLookupResult(refreshed);
       syncForm(refreshed);
-      setSuccessMessage("Registration updated.");
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Update failed");
+      pushToast({
+        variant: "success",
+        title: "Registration Updated",
+        message: "Participant details were updated successfully."
+      });
+    } catch (requestError) {
+      setError(requestError);
     }
   };
 
@@ -76,15 +88,18 @@ export const RegistrationLookupPage = () => {
     }
 
     try {
-      setErrorMessage(null);
-      setSuccessMessage(null);
+      setError(null);
       const response = await api.cancelRegistration(lookupResult.registration.confirmationCode);
       const refreshed = await api.getRegistrationByCode(response.registration.confirmationCode);
       setLookupResult(refreshed);
       syncForm(refreshed);
-      setSuccessMessage("Registration cancelled.");
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Cancellation failed");
+      pushToast({
+        variant: "warning",
+        title: "Registration Cancelled",
+        message: "Participant registration is now cancelled."
+      });
+    } catch (requestError) {
+      setError(requestError);
     }
   };
 
@@ -95,8 +110,10 @@ export const RegistrationLookupPage = () => {
         Use your confirmation code to view, edit, or cancel your registration.
       </p>
 
-      {errorMessage && <p className="error-text">{errorMessage}</p>}
-      {successMessage && <p className="success-text">{successMessage}</p>}
+      {!isOnline && (
+        <p className="warning-text">You are offline. Lookup/update/cancel actions are disabled.</p>
+      )}
+      <ErrorCallout error={error} onRetry={handleLookup} />
 
       <div className="toolbar">
         <input
@@ -105,10 +122,16 @@ export const RegistrationLookupPage = () => {
           value={confirmationCode}
           onChange={(event) => setConfirmationCode(event.target.value)}
         />
-        <button className="btn btn-primary" type="button" onClick={handleLookup} disabled={isLoading}>
+        <button
+          className="btn btn-primary"
+          type="button"
+          onClick={handleLookup}
+          disabled={isLoading || !isOnline}
+        >
           {isLoading ? "Loading..." : "Lookup"}
         </button>
       </div>
+      <FieldErrorText message={getFieldError(error, "confirmationCode")} />
 
       {lookupResult && (
         <section className="detail-panel">
@@ -146,6 +169,7 @@ export const RegistrationLookupPage = () => {
                 }
                 disabled={lookupResult.registration.status === "CANCELLED"}
               />
+              <FieldErrorText message={getFieldError(error, "fullName")} />
             </label>
             <label htmlFor="manageAge">
               Age
@@ -158,6 +182,7 @@ export const RegistrationLookupPage = () => {
                 }
                 disabled={lookupResult.registration.status === "CANCELLED"}
               />
+              <FieldErrorText message={getFieldError(error, "age")} />
             </label>
             <label htmlFor="manageContact">
               Contact Number
@@ -169,6 +194,7 @@ export const RegistrationLookupPage = () => {
                 }
                 disabled={lookupResult.registration.status === "CANCELLED"}
               />
+              <FieldErrorText message={getFieldError(error, "contactNumber")} />
             </label>
             <label htmlFor="manageEmail">
               Email
@@ -181,6 +207,7 @@ export const RegistrationLookupPage = () => {
                 }
                 disabled={lookupResult.registration.status === "CANCELLED"}
               />
+              <FieldErrorText message={getFieldError(error, "email")} />
             </label>
           </div>
 
@@ -189,7 +216,7 @@ export const RegistrationLookupPage = () => {
               className="btn btn-primary"
               type="button"
               onClick={handleUpdate}
-              disabled={lookupResult.registration.status === "CANCELLED"}
+              disabled={lookupResult.registration.status === "CANCELLED" || !isOnline}
             >
               Update Registration
             </button>
@@ -197,7 +224,7 @@ export const RegistrationLookupPage = () => {
               className="btn btn-secondary"
               type="button"
               onClick={handleCancel}
-              disabled={lookupResult.registration.status === "CANCELLED"}
+              disabled={lookupResult.registration.status === "CANCELLED" || !isOnline}
             >
               Cancel Registration
             </button>

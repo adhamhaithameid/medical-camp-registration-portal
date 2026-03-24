@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminCampsPage } from "./pages/AdminCampsPage";
+import { AdminDiagnosticsPage } from "./pages/AdminDiagnosticsPage";
 import { AdminLoginPage } from "./pages/AdminLoginPage";
 import { AdminRegistrationsPage } from "./pages/AdminRegistrationsPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
@@ -12,6 +13,7 @@ import { HomePage } from "./pages/HomePage";
 import { PatientsPage } from "./pages/PatientsPage";
 import { RegistrationLookupPage } from "./pages/RegistrationLookupPage";
 import { RegistrationPage } from "./pages/RegistrationPage";
+import { SystemStatusPage } from "./pages/SystemStatusPage";
 
 export const AppRoutes = () => {
   return (
@@ -28,9 +30,11 @@ export const AppRoutes = () => {
           <Route path="admin/registrations" element={<AdminRegistrationsPage />} />
           <Route path="admin/patients" element={<PatientsPage />} />
           <Route path="admin/doctors" element={<DoctorsPage />} />
+          <Route path="admin/system" element={<SystemStatusPage />} />
           <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN"]} />}>
             <Route path="admin/camps" element={<AdminCampsPage />} />
             <Route path="admin/users" element={<AdminUsersPage />} />
+            <Route path="admin/diagnostics" element={<AdminDiagnosticsPage />} />
           </Route>
         </Route>
 

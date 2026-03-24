@@ -1,6 +1,6 @@
 import type {
+  AdminDiagnosticsResponse,
   AdminRegistrationsResponse,
-  AdminUser,
   AdminUserResponse,
   AdminUsersResponse,
   AuthResult,
@@ -13,6 +13,7 @@ import type {
   DoctorResponse,
   DoctorsResponse,
   LoginInput,
+  NotificationLogsResponse,
   PatientInput,
   PatientResponse,
   PatientsResponse,
@@ -20,28 +21,47 @@ import type {
   RegistrationLookupResponse,
   RegistrationResponse,
   RegistrationUpdateInput,
+  SystemHealthSnapshot,
+  SystemStatusResponse,
   UpdateAdminUserInput
 } from "@medical-camp/shared";
 
 const API_BASE_URL = "/api";
 
+type ErrorCategory = "http" | "network" | "unknown";
+
+type FieldErrors = Record<string, string[]>;
+
 interface ApiErrorPayload {
   message?: unknown;
   details?: unknown;
+  fieldErrors?: unknown;
+  requestId?: unknown;
+  errorCode?: unknown;
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   readonly status?: number;
   readonly method: string;
   readonly path: string;
-  readonly category: "http" | "network" | "unknown";
+  readonly category: ErrorCategory;
+  readonly requestId?: string;
+  readonly errorCode?: string;
+  readonly details: string[];
+  readonly fieldErrors: FieldErrors;
+  readonly hint?: string;
 
   constructor(params: {
     message: string;
     method: string;
     path: string;
     status?: number;
-    category?: "http" | "network" | "unknown";
+    category?: ErrorCategory;
+    requestId?: string;
+    errorCode?: string;
+    details?: string[];
+    fieldErrors?: FieldErrors;
+    hint?: string;
   }) {
     super(params.message);
     this.name = "ApiError";
@@ -49,6 +69,19 @@ class ApiError extends Error {
     this.path = params.path;
     this.status = params.status;
     this.category = params.category ?? "unknown";
+    this.requestId = params.requestId;
+    this.errorCode = params.errorCode;
+    this.details = params.details ?? [];
+    this.fieldErrors = params.fieldErrors ?? {};
+    this.hint = params.hint;
+  }
+
+  get retryable() {
+    return (
+      this.category === "network" ||
+      this.status === 429 ||
+      (this.status !== undefined && this.status >= 500)
+    );
   }
 }
 
@@ -72,10 +105,24 @@ const toDetails = (value: unknown): string[] => {
   return [];
 };
 
+const toFieldErrors = (value: unknown): FieldErrors => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.entries(value as Record<string, unknown>).reduce<FieldErrors>((accumulator, [key, raw]) => {
+    const messages = toDetails(raw);
+    if (messages.length > 0) {
+      accumulator[key] = messages;
+    }
+    return accumulator;
+  }, {});
+};
+
 const getStatusHint = (status: number) => {
   switch (status) {
     case 400:
-      return "Invalid request payload. Check the highlighted form fields.";
+      return "Invalid request payload. Check highlighted form fields.";
     case 401:
       return "Authentication failed or session expired. Login again and retry.";
     case 403:
@@ -83,15 +130,29 @@ const getStatusHint = (status: number) => {
     case 404:
       return "Requested resource was not found.";
     case 409:
-      return "Operation conflicts with current data state (duplicate or rule violation).";
+      return "Operation conflicts with current data (duplicate or business-rule violation).";
     case 429:
-      return "Too many requests. Wait a moment before retrying.";
+      return "Too many requests. Wait a few seconds and retry.";
     default:
       if (status >= 500) {
-        return "Server-side error. Check backend logs and API health endpoint.";
+        return "Server-side failure. Check backend logs and /api/health.";
       }
       return null;
   }
+};
+
+const readRequestId = (response: Response, payload: ApiErrorPayload | null) => {
+  const headerRequestId = response.headers.get("x-request-id");
+
+  if (headerRequestId && headerRequestId.trim()) {
+    return headerRequestId.trim();
+  }
+
+  if (typeof payload?.requestId === "string" && payload.requestId.trim()) {
+    return payload.requestId.trim();
+  }
+
+  return undefined;
 };
 
 const buildHttpError = async (response: Response, method: string, path: string) => {
@@ -108,18 +169,26 @@ const buildHttpError = async (response: Response, method: string, path: string) 
       ? payload.message.trim()
       : "Request failed";
   const details = toDetails(payload?.details);
+  const fieldErrors = toFieldErrors(payload?.fieldErrors);
   const hint = getStatusHint(response.status);
   const context = `${method.toUpperCase()} ${API_BASE_URL}${path}`;
   const statusLabel = `${response.status} ${toTitle(response.statusText || "Error")}`;
+  const requestId = readRequestId(response, payload);
+  const requestIdSuffix = requestId ? ` Request ID: ${requestId}.` : "";
   const detailSuffix = details.length > 0 ? ` Details: ${details.join(" | ")}.` : "";
   const hintSuffix = hint ? ` Hint: ${hint}` : "";
 
   return new ApiError({
-    message: `${baseMessage} (${statusLabel}, ${context}).${detailSuffix}${hintSuffix}`,
+    message: `${baseMessage} (${statusLabel}, ${context}).${detailSuffix}${requestIdSuffix}${hintSuffix}`,
     method,
     path,
     status: response.status,
-    category: "http"
+    category: "http",
+    requestId,
+    errorCode: typeof payload?.errorCode === "string" ? payload.errorCode : undefined,
+    details,
+    fieldErrors,
+    hint: hint ?? undefined
   });
 };
 
@@ -128,13 +197,14 @@ const buildNetworkError = (error: unknown, method: string, path: string) => {
   const rawMessage =
     error instanceof Error && error.message.trim() ? error.message.trim() : "Network failure";
   const hint =
-    "Verify backend is running on http://localhost:4000, frontend on http://localhost:5173, and CORS_ORIGIN includes your host.";
+    "Verify backend runs on http://localhost:4000, frontend on http://localhost:5173, and CORS_ORIGIN includes your current host.";
 
   return new ApiError({
     message: `${rawMessage} (${context}). Hint: ${hint}`,
     method,
     path,
-    category: "network"
+    category: "network",
+    hint
   });
 };
 
@@ -185,6 +255,89 @@ const requestText = async (path: string, init: RequestInit = {}): Promise<string
   return response.text();
 };
 
+export const isApiError = (error: unknown): error is ApiError => error instanceof ApiError;
+
+export const getErrorMessage = (error: unknown, fallback = "Request failed") => {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+export const getFieldErrors = (error: unknown): FieldErrors => {
+  if (error instanceof ApiError) {
+    return error.fieldErrors;
+  }
+
+  return {};
+};
+
+export const getFieldError = (error: unknown, ...fieldNames: string[]) => {
+  const fieldErrors = getFieldErrors(error);
+
+  for (const fieldName of fieldNames) {
+    const message = fieldErrors[fieldName]?.[0];
+    if (message) {
+      return message;
+    }
+  }
+
+  return null;
+};
+
+export const isRetryableError = (error: unknown) => {
+  if (error instanceof ApiError) {
+    return error.retryable;
+  }
+
+  return false;
+};
+
+export interface ErrorPresentation {
+  title: string;
+  whatHappened: string;
+  whatToDo: string;
+  requestId?: string;
+  retryable: boolean;
+}
+
+export const describeError = (error: unknown, fallbackMessage = "Request failed"): ErrorPresentation => {
+  if (error instanceof ApiError) {
+    const whatToDo =
+      error.hint ??
+      "Retry the action. If it keeps failing, share the Request ID with support.";
+
+    return {
+      title: "Operation Failed",
+      whatHappened: error.message,
+      whatToDo,
+      requestId: error.requestId,
+      retryable: error.retryable
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      title: "Operation Failed",
+      whatHappened: error.message,
+      whatToDo: "Retry the action and verify your network connection.",
+      retryable: false
+    };
+  }
+
+  return {
+    title: "Operation Failed",
+    whatHappened: fallbackMessage,
+    whatToDo: "Retry the action and check server status if the issue continues.",
+    retryable: false
+  };
+};
+
 export interface AdminRegistrationsQuery {
   search?: string;
   campId?: number;
@@ -209,6 +362,8 @@ const toQueryString = (query: Record<string, string | number | undefined>) => {
 };
 
 export const api = {
+  getHealth: () => request<SystemHealthSnapshot>("/health"),
+
   getCamps: () => request<CampsResponse>("/camps"),
   getCampById: (id: number) => request<CampResponse>(`/camps/${id}`),
 
@@ -247,6 +402,10 @@ export const api = {
     const payload = await request<AuthStatusResponse>("/auth/status");
     return payload.auth;
   },
+
+  getSystemStatus: () => request<SystemStatusResponse>("/admin/system/status"),
+  getAdminDiagnostics: () => request<AdminDiagnosticsResponse>("/admin/diagnostics"),
+  exportAdminDiagnosticsReport: () => requestText("/admin/diagnostics/export.json"),
 
   getAdminCamps: () => request<CampsResponse>("/admin/camps"),
   createCamp: (payload: CampInput) =>
@@ -293,9 +452,7 @@ export const api = {
       method: "PATCH"
     }),
   getRegistrationNotifications: (id: number) =>
-    request<{ notifications: Array<Record<string, unknown>> }>(
-      `/admin/registrations/${id}/notifications`
-    ),
+    request<NotificationLogsResponse>(`/admin/registrations/${id}/notifications`),
 
   getAdminUsers: () => request<AdminUsersResponse>("/admin/users"),
   getAdminUserById: (id: number) => request<AdminUserResponse>(`/admin/users/${id}`),
@@ -314,10 +471,7 @@ export const api = {
       method: "DELETE"
     }),
 
-  getPatients: (search?: string) =>
-    request<PatientsResponse>(
-      `/admin/patients${search ? toQueryString({ search }) : ""}`
-    ),
+  getPatients: (search?: string) => request<PatientsResponse>(`/admin/patients${search ? toQueryString({ search }) : ""}`),
   getPatientById: (id: number) => request<PatientResponse>(`/admin/patients/${id}`),
   createPatient: (payload: PatientInput) =>
     request<PatientResponse>("/admin/patients", {
@@ -334,10 +488,7 @@ export const api = {
       method: "DELETE"
     }),
 
-  getDoctors: (search?: string) =>
-    request<DoctorsResponse>(
-      `/admin/doctors${search ? toQueryString({ search }) : ""}`
-    ),
+  getDoctors: (search?: string) => request<DoctorsResponse>(`/admin/doctors${search ? toQueryString({ search }) : ""}`),
   getDoctorById: (id: number) => request<DoctorResponse>(`/admin/doctors/${id}`),
   createDoctor: (payload: DoctorInput) =>
     request<DoctorResponse>("/admin/doctors", {

@@ -1,13 +1,32 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Camp } from "@medical-camp/shared";
+import { ErrorCallout } from "../components/ErrorCallout";
 import { api } from "../lib/api";
 
 export const CampDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const [camp, setCamp] = useState<Camp | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+
+  const loadCamp = async (campId: number, cancelled = false) => {
+    try {
+      setIsLoading(true);
+      const response = await api.getCampById(campId);
+      if (!cancelled) {
+        setCamp(response.camp);
+      }
+    } catch (requestError) {
+      if (!cancelled) {
+        setError(requestError);
+      }
+    } finally {
+      if (!cancelled) {
+        setIsLoading(false);
+      }
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -16,26 +35,12 @@ export const CampDetailsPage = () => {
       const campId = Number(id);
 
       if (!Number.isInteger(campId) || campId <= 0) {
-        setErrorMessage("Invalid camp id");
+        setError(new Error("Invalid camp id"));
         setIsLoading(false);
         return;
       }
 
-      try {
-        setIsLoading(true);
-        const response = await api.getCampById(campId);
-        if (!cancelled) {
-          setCamp(response.camp);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setErrorMessage(error instanceof Error ? error.message : "Failed to load camp");
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
+      await loadCamp(campId, cancelled);
     };
 
     void load();
@@ -49,8 +54,21 @@ export const CampDetailsPage = () => {
     return <p>Loading camp details...</p>;
   }
 
-  if (errorMessage) {
-    return <p className="error-text">{errorMessage}</p>;
+  if (error) {
+    return (
+      <section className="workspace-page">
+        <ErrorCallout
+          error={error}
+          onRetry={() => {
+            const campId = Number(id);
+            if (Number.isInteger(campId) && campId > 0) {
+              return loadCamp(campId);
+            }
+            return undefined;
+          }}
+        />
+      </section>
+    );
   }
 
   if (!camp) {

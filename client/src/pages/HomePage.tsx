@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Camp } from "@medical-camp/shared";
 import { api } from "../lib/api";
+import { ErrorCallout } from "../components/ErrorCallout";
 
 export const HomePage = () => {
   const [camps, setCamps] = useState<Camp[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -20,7 +21,7 @@ export const HomePage = () => {
         }
       } catch (error) {
         if (!cancelled) {
-          setErrorMessage(error instanceof Error ? error.message : "Failed to load camps");
+          setError(error);
         }
       } finally {
         if (!cancelled) {
@@ -61,7 +62,7 @@ export const HomePage = () => {
         </div>
       </section>
 
-      {errorMessage && <p className="error-text">{errorMessage}</p>}
+      <ErrorCallout error={error} onRetry={() => api.getCamps().then((response) => setCamps(response.camps))} />
 
       <section className="kpi-grid" aria-label="Operations overview">
         <article className="kpi-item">

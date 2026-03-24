@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { AdminRole, AdminUser } from "@medical-camp/shared";
-import { api } from "../lib/api";
+import { ErrorCallout } from "../components/ErrorCallout";
+import { FieldErrorText } from "../components/FieldErrorText";
+import { useToast } from "../context/ToastContext";
+import { api, getFieldError } from "../lib/api";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 const initialCreateForm = {
   username: "",
@@ -9,11 +13,12 @@ const initialCreateForm = {
 };
 
 export const AdminUsersPage = () => {
+  const { pushToast } = useToast();
+  const isOnline = useOnlineStatus();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [search, setSearch] = useState("");
   const [createForm, setCreateForm] = useState(initialCreateForm);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -22,8 +27,8 @@ export const AdminUsersPage = () => {
       setIsLoading(true);
       const response = await api.getAdminUsers();
       setUsers(response.users);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to load admins");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsLoading(false);
     }
@@ -35,11 +40,15 @@ export const AdminUsersPage = () => {
 
   const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setErrorMessage(null);
-    setSuccessMessage(null);
+    setError(null);
+
+    if (!isOnline) {
+      setError(new Error("You are offline. Reconnect before creating admin users."));
+      return;
+    }
 
     if (!createForm.username.trim() || !createForm.password.trim()) {
-      setErrorMessage("Username and password are required.");
+      setError(new Error("Username and password are required."));
       return;
     }
 
@@ -51,10 +60,14 @@ export const AdminUsersPage = () => {
         role: createForm.role
       });
       setCreateForm(initialCreateForm);
-      setSuccessMessage("Admin user created successfully.");
+      pushToast({
+        variant: "success",
+        title: "Admin Created",
+        message: "Admin user created successfully."
+      });
       await load();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to create admin user");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsSubmitting(false);
     }
@@ -62,21 +75,35 @@ export const AdminUsersPage = () => {
 
   const handleRoleChange = async (user: AdminUser, role: AdminRole) => {
     try {
+      if (!isOnline) {
+        throw new Error("You are offline. Reconnect before role changes.");
+      }
       await api.updateAdminUser(user.id, { role });
-      setSuccessMessage("Admin role updated.");
+      pushToast({
+        variant: "success",
+        title: "Role Updated",
+        message: `Role updated for ${user.username}.`
+      });
       await load();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to update admin role");
+    } catch (requestError) {
+      setError(requestError);
     }
   };
 
   const handleToggleActive = async (user: AdminUser) => {
     try {
+      if (!isOnline) {
+        throw new Error("You are offline. Reconnect before status changes.");
+      }
       await api.updateAdminUser(user.id, { isActive: !user.isActive });
-      setSuccessMessage("Admin active status updated.");
+      pushToast({
+        variant: "warning",
+        title: "Status Updated",
+        message: `Active status updated for ${user.username}.`
+      });
       await load();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to update admin status");
+    } catch (requestError) {
+      setError(requestError);
     }
   };
 
@@ -87,11 +114,18 @@ export const AdminUsersPage = () => {
     }
 
     try {
+      if (!isOnline) {
+        throw new Error("You are offline. Reconnect before deleting users.");
+      }
       await api.deleteAdminUser(user.id);
-      setSuccessMessage("Admin user deleted.");
+      pushToast({
+        variant: "warning",
+        title: "Admin Deleted",
+        message: `Admin user ${user.username} deleted.`
+      });
       await load();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to delete admin user");
+    } catch (requestError) {
+      setError(requestError);
     }
   };
 
@@ -104,8 +138,10 @@ export const AdminUsersPage = () => {
       <h2>Admins Management</h2>
       <p className="muted-text">Corporate access control for admin accounts (super admin only).</p>
 
-      {errorMessage && <p className="error-text">{errorMessage}</p>}
-      {successMessage && <p className="success-text">{successMessage}</p>}
+      {!isOnline && (
+        <p className="warning-text">You are offline. Admin role/status actions are disabled.</p>
+      )}
+      <ErrorCallout error={error} onRetry={load} />
 
       <form className="form-grid" onSubmit={handleCreate} noValidate>
         <label htmlFor="adminUsername">
@@ -117,6 +153,7 @@ export const AdminUsersPage = () => {
               setCreateForm((previous) => ({ ...previous, username: event.target.value }))
             }
           />
+          <FieldErrorText message={getFieldError(error, "username")} />
         </label>
         <label htmlFor="adminPassword">
           Password
@@ -128,6 +165,7 @@ export const AdminUsersPage = () => {
               setCreateForm((previous) => ({ ...previous, password: event.target.value }))
             }
           />
+          <FieldErrorText message={getFieldError(error, "password")} />
         </label>
         <label htmlFor="adminRole">
           Role
@@ -141,8 +179,9 @@ export const AdminUsersPage = () => {
             <option value="STAFF">Staff</option>
             <option value="SUPER_ADMIN">Super Admin</option>
           </select>
+          <FieldErrorText message={getFieldError(error, "role")} />
         </label>
-        <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+        <button className="btn btn-primary" type="submit" disabled={isSubmitting || !isOnline}>
           {isSubmitting ? "Creating..." : "Create Admin"}
         </button>
       </form>
@@ -195,6 +234,7 @@ export const AdminUsersPage = () => {
                             user.role === "SUPER_ADMIN" ? "STAFF" : "SUPER_ADMIN"
                           )
                         }
+                        disabled={!isOnline}
                       >
                         Toggle Role
                       </button>
@@ -202,10 +242,16 @@ export const AdminUsersPage = () => {
                         className="btn btn-secondary"
                         type="button"
                         onClick={() => handleToggleActive(user)}
+                        disabled={!isOnline}
                       >
                         Toggle Active
                       </button>
-                      <button className="btn btn-secondary" type="button" onClick={() => handleDelete(user)}>
+                      <button
+                        className="btn btn-secondary"
+                        type="button"
+                        onClick={() => handleDelete(user)}
+                        disabled={!isOnline}
+                      >
                         Delete
                       </button>
                     </div>

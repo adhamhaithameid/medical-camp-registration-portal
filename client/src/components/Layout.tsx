@@ -67,6 +67,14 @@ export const Layout = () => {
               >
                 Doctors
               </NavLink>
+              <NavLink
+                to="/admin/system"
+                className={({ isActive }) =>
+                  isActive ? "nav-link nav-link-active" : "nav-link"
+                }
+              >
+                System
+              </NavLink>
               {auth.role === "SUPER_ADMIN" && (
                 <>
                   <NavLink
@@ -84,6 +92,14 @@ export const Layout = () => {
                     }
                   >
                     Admins
+                  </NavLink>
+                  <NavLink
+                    to="/admin/diagnostics"
+                    className={({ isActive }) =>
+                      isActive ? "nav-link nav-link-active" : "nav-link"
+                    }
+                  >
+                    Diagnostics
                   </NavLink>
                 </>
               )}

@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { Patient, PatientInput } from "@medical-camp/shared";
-import { api } from "../lib/api";
+import { ErrorCallout } from "../components/ErrorCallout";
+import { FieldErrorText } from "../components/FieldErrorText";
+import { useToast } from "../context/ToastContext";
+import { api, getFieldError } from "../lib/api";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 const initialForm: PatientInput = {
   fullName: "",
@@ -13,12 +17,13 @@ const initialForm: PatientInput = {
 };
 
 export const PatientsPage = () => {
+  const { pushToast } = useToast();
+  const isOnline = useOnlineStatus();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [form, setForm] = useState<PatientInput>(initialForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,8 +32,8 @@ export const PatientsPage = () => {
       setIsLoading(true);
       const response = await api.getPatients(query);
       setPatients(response.patients);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to load patients");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsLoading(false);
     }
@@ -45,8 +50,12 @@ export const PatientsPage = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setErrorMessage(null);
-    setSuccessMessage(null);
+    setError(null);
+
+    if (!isOnline) {
+      setError(new Error("You are offline. Reconnect before saving patient records."));
+      return;
+    }
 
     if (
       !form.fullName.trim() ||
@@ -55,7 +64,7 @@ export const PatientsPage = () => {
       !form.contactNumber.trim() ||
       !form.address.trim()
     ) {
-      setErrorMessage("Full name, DOB, gender, contact number, and address are required.");
+      setError(new Error("Full name, DOB, gender, contact number, and address are required."));
       return;
     }
 
@@ -74,16 +83,24 @@ export const PatientsPage = () => {
 
       if (editingId) {
         await api.updatePatient(editingId, payload);
-        setSuccessMessage("Patient updated successfully.");
+        pushToast({
+          variant: "success",
+          title: "Patient Updated",
+          message: "Patient record updated successfully."
+        });
       } else {
         await api.createPatient(payload);
-        setSuccessMessage("Patient created successfully.");
+        pushToast({
+          variant: "success",
+          title: "Patient Created",
+          message: "New patient record created."
+        });
       }
 
       resetForm();
       await load(search || undefined);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to save patient");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsSubmitting(false);
     }
@@ -109,13 +126,19 @@ export const PatientsPage = () => {
     }
 
     try {
-      setErrorMessage(null);
-      setSuccessMessage(null);
+      if (!isOnline) {
+        throw new Error("You are offline. Reconnect before deleting records.");
+      }
+      setError(null);
       await api.deletePatient(id);
-      setSuccessMessage("Patient deleted successfully.");
+      pushToast({
+        variant: "warning",
+        title: "Patient Deleted",
+        message: "Patient record deleted."
+      });
       await load(search || undefined);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to delete patient");
+    } catch (requestError) {
+      setError(requestError);
     }
   };
 
@@ -130,8 +153,10 @@ export const PatientsPage = () => {
         Maintain complete patient records with fast search and structured updates.
       </p>
 
-      {errorMessage && <p className="error-text">{errorMessage}</p>}
-      {successMessage && <p className="success-text">{successMessage}</p>}
+      {!isOnline && (
+        <p className="warning-text">You are offline. Create/update/delete actions are disabled.</p>
+      )}
+      <ErrorCallout error={error} onRetry={() => load(search || undefined)} />
 
       <div className="toolbar">
         <input
@@ -150,7 +175,7 @@ export const PatientsPage = () => {
         >
           Clear
         </button>
-        <button className="btn btn-secondary" type="button" onClick={handleSearch}>
+        <button className="btn btn-secondary" type="button" onClick={handleSearch} disabled={!isOnline}>
           Search
         </button>
       </div>
@@ -165,6 +190,7 @@ export const PatientsPage = () => {
             value={form.fullName}
             onChange={(event) => setForm((previous) => ({ ...previous, fullName: event.target.value }))}
           />
+          <FieldErrorText message={getFieldError(error, "fullName")} />
         </label>
         <label htmlFor="patientDob">
           Date of Birth
@@ -176,6 +202,7 @@ export const PatientsPage = () => {
               setForm((previous) => ({ ...previous, dateOfBirth: event.target.value }))
             }
           />
+          <FieldErrorText message={getFieldError(error, "dateOfBirth")} />
         </label>
         <label htmlFor="patientGender">
           Gender
@@ -184,6 +211,7 @@ export const PatientsPage = () => {
             value={form.gender}
             onChange={(event) => setForm((previous) => ({ ...previous, gender: event.target.value }))}
           />
+          <FieldErrorText message={getFieldError(error, "gender")} />
         </label>
         <label htmlFor="patientContact">
           Contact Number
@@ -194,6 +222,7 @@ export const PatientsPage = () => {
               setForm((previous) => ({ ...previous, contactNumber: event.target.value }))
             }
           />
+          <FieldErrorText message={getFieldError(error, "contactNumber")} />
         </label>
         <label htmlFor="patientEmail">
           Email
@@ -203,6 +232,7 @@ export const PatientsPage = () => {
             value={form.email ?? ""}
             onChange={(event) => setForm((previous) => ({ ...previous, email: event.target.value }))}
           />
+          <FieldErrorText message={getFieldError(error, "email")} />
         </label>
         <label htmlFor="patientAddress">
           Address
@@ -211,6 +241,7 @@ export const PatientsPage = () => {
             value={form.address}
             onChange={(event) => setForm((previous) => ({ ...previous, address: event.target.value }))}
           />
+          <FieldErrorText message={getFieldError(error, "address")} />
         </label>
         <label htmlFor="patientHistory">
           Medical History
@@ -221,10 +252,11 @@ export const PatientsPage = () => {
               setForm((previous) => ({ ...previous, medicalHistory: event.target.value }))
             }
           />
+          <FieldErrorText message={getFieldError(error, "medicalHistory")} />
         </label>
 
         <div className="inline-actions">
-          <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+          <button className="btn btn-primary" type="submit" disabled={isSubmitting || !isOnline}>
             {isSubmitting ? "Saving..." : editingId ? "Update Patient" : "Create Patient"}
           </button>
           {editingId && (
@@ -263,7 +295,12 @@ export const PatientsPage = () => {
                       <button className="btn btn-secondary" type="button" onClick={() => startEdit(patient)}>
                         Edit
                       </button>
-                      <button className="btn btn-secondary" type="button" onClick={() => handleDelete(patient.id)}>
+                      <button
+                        className="btn btn-secondary"
+                        type="button"
+                        onClick={() => handleDelete(patient.id)}
+                        disabled={!isOnline}
+                      >
                         Delete
                       </button>
                     </div>

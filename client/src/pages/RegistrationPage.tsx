@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Camp, RegistrationInput, RegistrationRecord } from "@medical-camp/shared";
-import { api } from "../lib/api";
+import { ErrorCallout } from "../components/ErrorCallout";
+import { FieldErrorText } from "../components/FieldErrorText";
+import { useToast } from "../context/ToastContext";
+import { api, getFieldError } from "../lib/api";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 const initialForm: RegistrationInput = {
   fullName: "",
@@ -13,45 +17,47 @@ const initialForm: RegistrationInput = {
 
 export const RegistrationPage = () => {
   const [searchParams] = useSearchParams();
+  const { pushToast } = useToast();
+  const isOnline = useOnlineStatus();
   const [camps, setCamps] = useState<Camp[]>([]);
   const [form, setForm] = useState<RegistrationInput>(initialForm);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [successRegistration, setSuccessRegistration] = useState<RegistrationRecord | null>(null);
+
+  const loadCamps = async (cancelled = false) => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      const response = await api.getCamps();
+      if (cancelled) {
+        return;
+      }
+
+      setCamps(response.camps);
+      const preferredCampId = Number(searchParams.get("campId"));
+      const selectedCampId =
+        Number.isInteger(preferredCampId) && response.camps.some((camp) => camp.id === preferredCampId)
+          ? preferredCampId
+          : response.camps[0]?.id ?? 0;
+
+      setForm((previous) => ({ ...previous, campId: selectedCampId }));
+    } catch (requestError) {
+      if (!cancelled) {
+        setError(requestError);
+      }
+    } finally {
+      if (!cancelled) {
+        setIsLoading(false);
+      }
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
 
-    const load = async () => {
-      try {
-        setIsLoading(true);
-        const response = await api.getCamps();
-        if (cancelled) {
-          return;
-        }
-
-        setCamps(response.camps);
-        const preferredCampId = Number(searchParams.get("campId"));
-        const selectedCampId =
-          Number.isInteger(preferredCampId) &&
-          response.camps.some((camp) => camp.id === preferredCampId)
-            ? preferredCampId
-            : response.camps[0]?.id ?? 0;
-
-        setForm((previous) => ({ ...previous, campId: selectedCampId }));
-      } catch (error) {
-        if (!cancelled) {
-          setErrorMessage(error instanceof Error ? error.message : "Failed to load camps");
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void load();
+    void loadCamps(cancelled);
 
     return () => {
       cancelled = true;
@@ -85,12 +91,17 @@ export const RegistrationPage = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setErrorMessage(null);
+    setError(null);
     setSuccessRegistration(null);
+
+    if (!isOnline) {
+      setError(new Error("You are offline. Reconnect before submitting registration."));
+      return;
+    }
 
     const validationError = validate();
     if (validationError) {
-      setErrorMessage(validationError);
+      setError(new Error(validationError));
       return;
     }
 
@@ -104,6 +115,14 @@ export const RegistrationPage = () => {
         campId: Number(form.campId)
       });
       setSuccessRegistration(response.registration);
+      pushToast({
+        variant: response.registration.status === "WAITLISTED" ? "warning" : "success",
+        title: "Registration Submitted",
+        message:
+          response.registration.status === "WAITLISTED"
+            ? "Camp is full, registration is waitlisted."
+            : "Registration confirmed successfully."
+      });
       setForm((previous) => ({
         ...previous,
         fullName: "",
@@ -111,8 +130,8 @@ export const RegistrationPage = () => {
         contactNumber: "",
         email: ""
       }));
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to submit registration");
+    } catch (requestError) {
+      setError(requestError);
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +154,10 @@ export const RegistrationPage = () => {
         </p>
       )}
 
-      {errorMessage && <p className="error-text">{errorMessage}</p>}
+      {!isOnline && (
+        <p className="warning-text">You are offline. Form submission is disabled until reconnect.</p>
+      )}
+      <ErrorCallout error={error} onRetry={() => loadCamps()} />
 
       {successRegistration && (
         <div className="success-box">
@@ -176,6 +198,7 @@ export const RegistrationPage = () => {
               </option>
             ))}
           </select>
+          <FieldErrorText message={getFieldError(error, "campId")} />
         </label>
 
         <label htmlFor="registrationName">
@@ -187,6 +210,7 @@ export const RegistrationPage = () => {
               setForm((previous) => ({ ...previous, fullName: event.target.value }))
             }
           />
+          <FieldErrorText message={getFieldError(error, "fullName")} />
         </label>
 
         <label htmlFor="registrationAge">
@@ -199,6 +223,7 @@ export const RegistrationPage = () => {
             value={form.age}
             onChange={(event) => setForm((previous) => ({ ...previous, age: Number(event.target.value) }))}
           />
+          <FieldErrorText message={getFieldError(error, "age")} />
         </label>
 
         <label htmlFor="registrationContact">
@@ -210,6 +235,7 @@ export const RegistrationPage = () => {
               setForm((previous) => ({ ...previous, contactNumber: event.target.value }))
             }
           />
+          <FieldErrorText message={getFieldError(error, "contactNumber")} />
         </label>
 
         <label htmlFor="registrationEmail">
@@ -220,9 +246,10 @@ export const RegistrationPage = () => {
             value={form.email ?? ""}
             onChange={(event) => setForm((previous) => ({ ...previous, email: event.target.value }))}
           />
+          <FieldErrorText message={getFieldError(error, "email")} />
         </label>
 
-        <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+        <button className="btn btn-primary" type="submit" disabled={isSubmitting || !isOnline}>
           {isSubmitting ? "Submitting..." : "Submit Registration"}
         </button>
       </form>
