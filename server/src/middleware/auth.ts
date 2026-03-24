@@ -1,22 +1,43 @@
 import type { NextFunction, Request, Response } from "express";
-import { verifyAdminToken } from "../utils/auth";
+import type { UserRole } from "@prisma/client";
+import { AUTH_COOKIE_NAME, verifyAuthToken } from "../utils/auth";
 
-export const requireAdminAuth = (
+export const requireAuth = (
   request: Request,
   response: Response,
   next: NextFunction
 ) => {
   try {
-    const token = request.cookies?.mcamp_admin_token;
+    const token = request.cookies?.[AUTH_COOKIE_NAME];
 
     if (!token) {
       return response.status(401).json({ message: "Authentication required" });
     }
 
-    const payload = verifyAdminToken(token);
-    request.admin = { id: payload.id, username: payload.username };
+    const payload = verifyAuthToken(token);
+    request.user = {
+      id: payload.id,
+      email: payload.email,
+      fullName: payload.fullName,
+      role: payload.role
+    };
+
     return next();
   } catch {
     return response.status(401).json({ message: "Invalid or expired session" });
   }
+};
+
+export const requireRoles = (...roles: UserRole[]) => {
+  return (request: Request, response: Response, next: NextFunction) => {
+    if (!request.user) {
+      return response.status(401).json({ message: "Authentication required" });
+    }
+
+    if (!roles.includes(request.user.role)) {
+      return response.status(403).json({ message: "You do not have permission for this action" });
+    }
+
+    return next();
+  };
 };

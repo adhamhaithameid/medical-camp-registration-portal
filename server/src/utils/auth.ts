@@ -1,11 +1,16 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import ms from "ms";
+import type { UserRole } from "@prisma/client";
 import { getEnv } from "../config/env";
 
-export interface AdminTokenPayload {
+export const AUTH_COOKIE_NAME = "hms_auth_token";
+
+export interface AuthTokenPayload {
   id: number;
-  username: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
 }
 
 export const hashPassword = async (plainText: string) => {
@@ -16,7 +21,7 @@ export const verifyPassword = async (plainText: string, hashed: string) => {
   return bcrypt.compare(plainText, hashed);
 };
 
-export const signAdminToken = (payload: AdminTokenPayload) => {
+export const signAuthToken = (payload: AuthTokenPayload) => {
   const env = getEnv();
 
   return jwt.sign(payload, env.JWT_SECRET, {
@@ -24,9 +29,9 @@ export const signAdminToken = (payload: AdminTokenPayload) => {
   });
 };
 
-export const verifyAdminToken = (token: string): AdminTokenPayload => {
+export const verifyAuthToken = (token: string): AuthTokenPayload => {
   const env = getEnv();
-  return jwt.verify(token, env.JWT_SECRET) as AdminTokenPayload;
+  return jwt.verify(token, env.JWT_SECRET) as AuthTokenPayload;
 };
 
 export const getTokenMaxAge = () => {

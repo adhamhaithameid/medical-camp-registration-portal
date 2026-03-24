@@ -1,9 +1,9 @@
-import type { AdminTokenPayload } from "../utils/auth";
+import type { AuthTokenPayload } from "../utils/auth";
 
 declare global {
   namespace Express {
     interface Request {
-      admin?: Pick<AdminTokenPayload, "id" | "username">;
+      user?: Pick<AuthTokenPayload, "id" | "email" | "fullName" | "role">;
     }
   }
 }

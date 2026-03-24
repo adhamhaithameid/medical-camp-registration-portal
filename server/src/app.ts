@@ -3,11 +3,12 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import path from "path";
 import { getEnv } from "./config/env";
-import { authRouter } from "./routes/auth";
-import { campsRouter } from "./routes/camps";
-import { registrationsRouter } from "./routes/registrations";
-import { adminRouter } from "./routes/admin";
 import { errorHandler } from "./middleware/error-handler";
+import { appointmentsRouter } from "./routes/appointments";
+import { authRouter } from "./routes/auth";
+import { billingRouter } from "./routes/billing";
+import { doctorsRouter } from "./routes/doctors";
+import { patientsRouter } from "./routes/patients";
 
 export const createApp = () => {
   const env = getEnv();
@@ -34,14 +35,16 @@ export const createApp = () => {
   app.get("/api/health", (_request, response) => {
     return response.status(200).json({
       status: "ok",
+      service: "hospital-management-system",
       timestamp: new Date().toISOString()
     });
   });
 
-  app.use("/api/camps", campsRouter);
-  app.use("/api/registrations", registrationsRouter);
   app.use("/api/auth", authRouter);
-  app.use("/api/admin", adminRouter);
+  app.use("/api/patients", patientsRouter);
+  app.use("/api/doctors", doctorsRouter);
+  app.use("/api/appointments", appointmentsRouter);
+  app.use("/api/billing", billingRouter);
 
   if (env.NODE_ENV === "production") {
     const clientDistPath = path.resolve(__dirname, "../../client/dist");
