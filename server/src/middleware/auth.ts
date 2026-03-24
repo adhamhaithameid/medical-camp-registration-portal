@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import type { UserRole } from "@prisma/client";
+import type { AdminRole } from "@prisma/client";
 import { AUTH_COOKIE_NAME, verifyAuthToken } from "../utils/auth";
 
 export const requireAuth = (
@@ -17,8 +17,7 @@ export const requireAuth = (
     const payload = verifyAuthToken(token);
     request.user = {
       id: payload.id,
-      email: payload.email,
-      fullName: payload.fullName,
+      username: payload.username,
       role: payload.role
     };
 
@@ -28,7 +27,7 @@ export const requireAuth = (
   }
 };
 
-export const requireRoles = (...roles: UserRole[]) => {
+export const requireRoles = (...roles: AdminRole[]) => {
   return (request: Request, response: Response, next: NextFunction) => {
     if (!request.user) {
       return response.status(401).json({ message: "Authentication required" });

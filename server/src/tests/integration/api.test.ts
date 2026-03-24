@@ -10,9 +10,10 @@ process.env.NODE_ENV = "test";
 process.env.DATABASE_URL = "file:./test-integration.db";
 process.env.JWT_SECRET = "integration-secret-123";
 process.env.JWT_EXPIRES_IN = "8h";
-process.env.DEFAULT_USER_FULL_NAME = "System Admin";
-process.env.DEFAULT_USER_EMAIL = "admin@hms.local";
-process.env.DEFAULT_USER_PASSWORD = "admin12345";
+process.env.DEFAULT_SUPER_ADMIN_USERNAME = "admin";
+process.env.DEFAULT_SUPER_ADMIN_PASSWORD = "admin12345";
+process.env.DEFAULT_STAFF_USERNAME = "staff";
+process.env.DEFAULT_STAFF_PASSWORD = "staff12345";
 process.env.CORS_ORIGIN = "http://localhost:5173";
 
 const initializeDatabase = () => {
@@ -26,7 +27,7 @@ const initializeDatabase = () => {
   );
 };
 
-describe("HMS API integration", () => {
+describe("Medical Camp API integration", () => {
   let app: ReturnType<typeof import("../../app").createApp>;
 
   beforeAll(async () => {
@@ -52,136 +53,144 @@ describe("HMS API integration", () => {
     expect(response.body.status).toBe("ok");
   });
 
-  it("protects modules for anonymous users", async () => {
-    const response = await request(app).get("/api/patients");
+  it("blocks protected admin endpoint for anonymous users", async () => {
+    const response = await request(app).get("/api/admin/registrations");
     expect(response.status).toBe(401);
   });
 
-  it("supports full patient-doctor-appointment-billing flow", async () => {
+  it("supports public registration flow with duplicate protection and waitlist", async () => {
+    const campsResponse = await request(app).get("/api/camps");
+    expect(campsResponse.status).toBe(200);
+    expect(campsResponse.body.camps.length).toBeGreaterThan(0);
+
+    const firstCamp = campsResponse.body.camps[0] as {
+      id: number;
+      capacity: number;
+    };
+
+    const registrationResponse = await request(app).post("/api/registrations").send({
+      fullName: "Mariam Tarek",
+      age: 26,
+      contactNumber: "+20 100 555 6677",
+      email: "mariam@example.com",
+      campId: firstCamp.id
+    });
+
+    expect(registrationResponse.status).toBe(201);
+    const confirmationCode = registrationResponse.body.registration.confirmationCode as string;
+
+    const duplicateResponse = await request(app).post("/api/registrations").send({
+      fullName: "Mariam Tarek",
+      age: 26,
+      contactNumber: "+20 100 555 6677",
+      email: "mariam2@example.com",
+      campId: firstCamp.id
+    });
+
+    expect(duplicateResponse.status).toBe(409);
+
+    const lookupResponse = await request(app).post("/api/registrations/lookup").send({
+      confirmationCode
+    });
+
+    expect(lookupResponse.status).toBe(200);
+    expect(lookupResponse.body.registration.fullName).toBe("Mariam Tarek");
+
+    const updateResponse = await request(app)
+      .patch(`/api/registrations/${confirmationCode}`)
+      .send({
+        fullName: "Mariam Tarek Updated",
+        age: 27,
+        contactNumber: "+20 100 777 8899"
+      });
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.registration.fullName).toBe("Mariam Tarek Updated");
+
+    const cancelResponse = await request(app).delete(`/api/registrations/${confirmationCode}`);
+    expect(cancelResponse.status).toBe(200);
+    expect(cancelResponse.body.registration.status).toBe("CANCELLED");
+  });
+
+  it("supports admin auth, filtering, csv export, and waitlist promotion", async () => {
     const agent = request.agent(app);
 
     const loginResponse = await agent.post("/api/auth/login").send({
-      email: process.env.DEFAULT_USER_EMAIL,
-      password: process.env.DEFAULT_USER_PASSWORD
+      username: process.env.DEFAULT_SUPER_ADMIN_USERNAME,
+      password: process.env.DEFAULT_SUPER_ADMIN_PASSWORD
     });
 
     expect(loginResponse.status).toBe(200);
     expect(loginResponse.body.authenticated).toBe(true);
+    expect(loginResponse.body.role).toBe("SUPER_ADMIN");
 
-    const createPatientResponse = await agent.post("/api/patients").send({
-      fullName: "Mariam Tarek",
-      dateOfBirth: "1995-07-17",
-      gender: "Female",
-      phone: "+20 100 555 6677",
-      address: "Maadi, Cairo",
-      medicalHistory: "Seasonal allergies"
+    const campsResponse = await agent.get("/api/admin/camps");
+    expect(campsResponse.status).toBe(200);
+    const firstCampId = campsResponse.body.camps[0].id as number;
+
+    const waitlisted = await agent.post("/api/registrations").send({
+      fullName: "Waitlist Candidate",
+      age: 30,
+      contactNumber: "+20 109 999 8888",
+      campId: firstCampId
     });
 
-    expect(createPatientResponse.status).toBe(201);
-    const patientId = createPatientResponse.body.patient.id as number;
+    expect(waitlisted.status).toBe(201);
+    expect(["WAITLISTED", "CONFIRMED"]).toContain(waitlisted.body.registration.status);
 
-    const createDoctorResponse = await agent.post("/api/doctors").send({
-      fullName: "Dr. Hany Nabil",
-      email: "hany.nabil@hms.local",
-      phone: "+20 110 999 8877",
-      specialization: "Dermatology",
-      schedule: "Mon-Wed 09:00-14:00"
+    const listResponse = await agent.get(
+      "/api/admin/registrations?search=Waitlist&page=1&pageSize=10"
+    );
+
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.meta.page).toBe(1);
+    expect(Array.isArray(listResponse.body.registrations)).toBe(true);
+
+    const csvResponse = await agent.get("/api/admin/registrations/export.csv");
+    expect(csvResponse.status).toBe(200);
+    expect(csvResponse.headers["content-type"]).toContain("text/csv");
+
+    const createCamp = await agent.post("/api/admin/camps").send({
+      name: "Promotion Flow Camp",
+      date: "2026-08-10T09:00:00.000Z",
+      location: "Cairo East",
+      description: "Camp used in integration tests for waitlist promotion",
+      capacity: 1,
+      isActive: true
     });
+    expect(createCamp.status).toBe(201);
+    const promotionCampId = createCamp.body.camp.id as number;
 
-    expect(createDoctorResponse.status).toBe(201);
-    const doctorId = createDoctorResponse.body.doctor.id as number;
-
-    const bookAppointmentResponse = await agent.post("/api/appointments").send({
-      patientId,
-      doctorId,
-      scheduledAt: "2026-09-10T10:00:00.000Z",
-      reason: "Skin rash check"
+    const confirmedRegistration = await agent.post("/api/registrations").send({
+      fullName: "Seat Holder",
+      age: 40,
+      contactNumber: "+20 101 700 7000",
+      campId: promotionCampId
     });
+    expect(confirmedRegistration.status).toBe(201);
+    expect(confirmedRegistration.body.registration.status).toBe("CONFIRMED");
 
-    expect(bookAppointmentResponse.status).toBe(201);
-    const appointmentId = bookAppointmentResponse.body.appointment.id as number;
-
-    const rescheduleResponse = await agent
-      .patch(`/api/appointments/${appointmentId}/reschedule`)
-      .send({
-        scheduledAt: "2026-09-11T11:00:00.000Z",
-        reason: "Patient requested different day"
-      });
-
-    expect(rescheduleResponse.status).toBe(200);
-    expect(rescheduleResponse.body.appointment.status).toBe("RESCHEDULED");
-
-    const cancelResponse = await agent
-      .patch(`/api/appointments/${appointmentId}/cancel`)
-      .send({
-        reason: "Patient no longer available"
-      });
-
-    expect(cancelResponse.status).toBe(200);
-    expect(cancelResponse.body.appointment.status).toBe("CANCELLED");
-
-    const calculateResponse = await agent.post("/api/billing/calculate").send({
-      items: [
-        { description: "Consultation", quantity: 1, unitPrice: 400 },
-        { description: "Medication", quantity: 2, unitPrice: 90 }
-      ]
+    const waitlistedRegistration = await agent.post("/api/registrations").send({
+      fullName: "Promotion Target",
+      age: 29,
+      contactNumber: "+20 101 909 8080",
+      campId: promotionCampId
     });
+    expect(waitlistedRegistration.status).toBe(201);
+    expect(waitlistedRegistration.body.registration.status).toBe("WAITLISTED");
 
-    expect(calculateResponse.status).toBe(200);
-    expect(calculateResponse.body.totalCost).toBe(580);
+    const targetId = waitlistedRegistration.body.registration.id as number;
 
-    const invoiceResponse = await agent.post("/api/billing/invoices").send({
-      patientId,
-      appointmentId,
-      items: [
-        { description: "Consultation", quantity: 1, unitPrice: 400 },
-        { description: "Medication", quantity: 2, unitPrice: 90 }
-      ]
+    const expandCamp = await agent.patch(`/api/admin/camps/${promotionCampId}`).send({
+      capacity: 2
     });
+    expect(expandCamp.status).toBe(200);
 
-    expect(invoiceResponse.status).toBe(201);
-    const invoiceId = invoiceResponse.body.invoice.id as number;
-
-    const payResponse = await agent
-      .post(`/api/billing/invoices/${invoiceId}/pay`)
-      .send({ paymentMethod: "Cash" });
-
-    expect(payResponse.status).toBe(200);
-    expect(payResponse.body.invoice.status).toBe("PAID");
-
-    const historyResponse = await agent.get(`/api/billing/history?patientId=${patientId}`);
-
-    expect(historyResponse.status).toBe(200);
-    expect(historyResponse.body.invoices.length).toBeGreaterThan(0);
-
-    const patientHistoryResponse = await agent.get(`/api/patients/${patientId}/history`);
-
-    expect(patientHistoryResponse.status).toBe(200);
-    expect(patientHistoryResponse.body.patient.id).toBe(patientId);
-    expect(Array.isArray(patientHistoryResponse.body.appointments)).toBe(true);
-    expect(Array.isArray(patientHistoryResponse.body.invoices)).toBe(true);
-
-    const deleteResponse = await agent.delete(`/api/patients/${patientId}`);
-
-    expect(deleteResponse.status).toBe(200);
-    expect(deleteResponse.body.patient.isDeleted).toBe(true);
-
-    const listActivePatients = await agent.get("/api/patients");
-    expect(listActivePatients.status).toBe(200);
-    expect(
-      listActivePatients.body.patients.some((patient: { id: number }) => patient.id === patientId)
-    ).toBe(false);
-
-    const listAllPatients = await agent.get("/api/patients?includeDeleted=true");
-    expect(listAllPatients.status).toBe(200);
-    expect(
-      listAllPatients.body.patients.some((patient: { id: number }) => patient.id === patientId)
-    ).toBe(true);
+    const promoteResponse = await agent.patch(`/api/admin/registrations/${targetId}/promote`);
+    expect(promoteResponse.status).toBe(200);
+    expect(promoteResponse.body.registration.status).toBe("CONFIRMED");
 
     const logoutResponse = await agent.post("/api/auth/logout");
     expect(logoutResponse.status).toBe(200);
-
-    const afterLogoutResponse = await agent.get("/api/patients");
-    expect(afterLogoutResponse.status).toBe(401);
   });
 });

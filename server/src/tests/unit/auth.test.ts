@@ -26,16 +26,15 @@ describe("auth utilities", () => {
   it("signs and verifies auth tokens", () => {
     const token = signAuthToken({
       id: 10,
-      email: "admin@hms.local",
-      fullName: "System Admin",
-      role: "ADMIN"
+      username: "admin",
+      role: "SUPER_ADMIN"
     });
 
     const payload = verifyAuthToken(token);
 
     expect(payload.id).toBe(10);
-    expect(payload.email).toBe("admin@hms.local");
-    expect(payload.role).toBe("ADMIN");
+    expect(payload.username).toBe("admin");
+    expect(payload.role).toBe("SUPER_ADMIN");
   });
 
   it("computes token max age", () => {

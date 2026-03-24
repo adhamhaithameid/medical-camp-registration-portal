@@ -1,144 +1,158 @@
+import { RegistrationStatus } from "@prisma/client";
 import { prisma } from "../config/prisma";
 import { getEnv } from "../config/env";
 import { hashPassword } from "../utils/auth";
 
-const samplePatients = [
+const sampleCamps = [
   {
-    fullName: "Nour Hassan",
-    dateOfBirth: new Date("1992-09-20T00:00:00.000Z"),
-    gender: "Female",
-    phone: "+20 101 111 2233",
-    address: "Nasr City, Cairo",
-    medicalHistory: "Hypertension, annual follow-up needed"
+    name: "Community Diabetes Screening Camp",
+    date: new Date("2026-05-10T08:00:00.000Z"),
+    location: "Nasr City Medical Hub",
+    description:
+      "Free diabetes screening, counseling, and risk-assessment workshop for adults.",
+    capacity: 2,
+    isActive: true
   },
   {
-    fullName: "Omar Adel",
-    dateOfBirth: new Date("1988-03-05T00:00:00.000Z"),
-    gender: "Male",
-    phone: "+20 102 333 4455",
-    address: "Heliopolis, Cairo",
-    medicalHistory: "Diabetes Type 2"
+    name: "Women Wellness Medical Camp",
+    date: new Date("2026-05-18T09:00:00.000Z"),
+    location: "Maadi Family Health Center",
+    description:
+      "Preventive screening and awareness sessions focused on women health and nutrition.",
+    capacity: 5,
+    isActive: true
+  },
+  {
+    name: "Rural Pediatric Outreach Camp",
+    date: new Date("2026-06-01T07:30:00.000Z"),
+    location: "Beni Suef Community Clinic",
+    description: "Pediatric checkups, vaccination follow-up, and parental guidance services.",
+    capacity: 3,
+    isActive: true
   }
 ];
 
-const sampleDoctors = [
-  {
-    fullName: "Dr. Salma Reda",
-    email: "salma.reda@hms.local",
-    phone: "+20 110 000 1001",
-    specialization: "Cardiology",
-    schedule: "Sun-Wed 10:00-16:00"
-  },
-  {
-    fullName: "Dr. Karim Mostafa",
-    email: "karim.mostafa@hms.local",
-    phone: "+20 110 000 1002",
-    specialization: "Endocrinology",
-    schedule: "Mon-Thu 12:00-18:00"
-  }
-];
-
-export const seedDatabase = async () => {
+const bootstrapAdminUsers = async () => {
   const env = getEnv();
-  const passwordHash = await hashPassword(env.DEFAULT_USER_PASSWORD);
 
-  await prisma.user.upsert({
-    where: { email: env.DEFAULT_USER_EMAIL },
+  await prisma.adminUser.upsert({
+    where: { username: env.DEFAULT_SUPER_ADMIN_USERNAME },
     update: {
-      fullName: env.DEFAULT_USER_FULL_NAME,
-      passwordHash,
-      role: "ADMIN"
+      passwordHash: await hashPassword(env.DEFAULT_SUPER_ADMIN_PASSWORD),
+      role: "SUPER_ADMIN",
+      isActive: true
     },
     create: {
-      fullName: env.DEFAULT_USER_FULL_NAME,
-      email: env.DEFAULT_USER_EMAIL,
-      passwordHash,
-      role: "ADMIN"
+      username: env.DEFAULT_SUPER_ADMIN_USERNAME,
+      passwordHash: await hashPassword(env.DEFAULT_SUPER_ADMIN_PASSWORD),
+      role: "SUPER_ADMIN",
+      isActive: true
     }
   });
 
-  for (const patient of samplePatients) {
-    const existing = await prisma.patient.findFirst({
+  await prisma.adminUser.upsert({
+    where: { username: env.DEFAULT_STAFF_USERNAME },
+    update: {
+      passwordHash: await hashPassword(env.DEFAULT_STAFF_PASSWORD),
+      role: "STAFF",
+      isActive: true
+    },
+    create: {
+      username: env.DEFAULT_STAFF_USERNAME,
+      passwordHash: await hashPassword(env.DEFAULT_STAFF_PASSWORD),
+      role: "STAFF",
+      isActive: true
+    }
+  });
+};
+
+const bootstrapCamps = async () => {
+  for (const camp of sampleCamps) {
+    const existing = await prisma.camp.findFirst({
       where: {
-        fullName: patient.fullName,
-        phone: patient.phone,
-        isDeleted: false
+        name: camp.name,
+        date: camp.date
       }
     });
 
     if (!existing) {
-      await prisma.patient.create({ data: patient });
+      await prisma.camp.create({ data: camp });
+      continue;
     }
-  }
 
-  for (const doctor of sampleDoctors) {
-    await prisma.doctor.upsert({
-      where: { email: doctor.email },
-      update: {
-        fullName: doctor.fullName,
-        phone: doctor.phone,
-        specialization: doctor.specialization,
-        schedule: doctor.schedule
-      },
-      create: doctor
-    });
-  }
-
-  const patient = await prisma.patient.findFirst({
-    where: { isDeleted: false },
-    orderBy: { id: "asc" }
-  });
-
-  const doctor = await prisma.doctor.findFirst({
-    orderBy: { id: "asc" }
-  });
-
-  if (patient && doctor) {
-    const scheduledAt = new Date("2026-04-15T10:30:00.000Z");
-
-    const existingAppointment = await prisma.appointment.findFirst({
-      where: {
-        patientId: patient.id,
-        doctorId: doctor.id,
-        scheduledAt
+    await prisma.camp.update({
+      where: { id: existing.id },
+      data: {
+        location: camp.location,
+        description: camp.description,
+        capacity: camp.capacity,
+        isActive: camp.isActive
       }
     });
-
-    if (!existingAppointment) {
-      const appointment = await prisma.appointment.create({
-        data: {
-          patientId: patient.id,
-          doctorId: doctor.id,
-          scheduledAt,
-          reason: "Routine checkup"
-        }
-      });
-
-      await prisma.invoice.create({
-        data: {
-          patientId: patient.id,
-          appointmentId: appointment.id,
-          totalCost: 550,
-          items: {
-            create: [
-              {
-                description: "Consultation",
-                quantity: 1,
-                unitPrice: 400,
-                lineTotal: 400
-              },
-              {
-                description: "Lab tests",
-                quantity: 1,
-                unitPrice: 150,
-                lineTotal: 150
-              }
-            ]
-          }
-        }
-      });
-    }
   }
+};
+
+const bootstrapRegistrations = async () => {
+  const firstCamp = await prisma.camp.findFirst({
+    orderBy: { id: "asc" }
+  });
+
+  if (!firstCamp) {
+    return;
+  }
+
+  const registrations = [
+    {
+      fullName: "Nour Hassan",
+      age: 31,
+      contactNumber: "+20 101 111 2233",
+      email: "nour.hassan@example.com",
+      status: RegistrationStatus.CONFIRMED,
+      confirmationCode: "SEEDNOUR01",
+      isActive: true
+    },
+    {
+      fullName: "Omar Adel",
+      age: 35,
+      contactNumber: "+20 102 333 4455",
+      email: "omar.adel@example.com",
+      status: RegistrationStatus.CONFIRMED,
+      confirmationCode: "SEEDOMAR02",
+      isActive: true
+    },
+    {
+      fullName: "Mona Khaled",
+      age: 28,
+      contactNumber: "+20 103 555 6677",
+      email: "mona.khaled@example.com",
+      status: RegistrationStatus.WAITLISTED,
+      confirmationCode: "SEEDMONA03",
+      isActive: true
+    }
+  ];
+
+  for (const registration of registrations) {
+    const existing = await prisma.registration.findUnique({
+      where: { confirmationCode: registration.confirmationCode }
+    });
+
+    if (existing) {
+      continue;
+    }
+
+    await prisma.registration.create({
+      data: {
+        ...registration,
+        campId: firstCamp.id
+      }
+    });
+  }
+};
+
+export const seedDatabase = async () => {
+  await bootstrapAdminUsers();
+  await bootstrapCamps();
+  await bootstrapRegistrations();
 };
 
 if (require.main === module) {
