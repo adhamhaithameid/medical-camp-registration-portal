@@ -3,8 +3,8 @@ import { resetEnvCache } from "../../config/env";
 import {
   getTokenMaxAge,
   hashPassword,
-  signAdminToken,
-  verifyAdminToken,
+  signAuthToken,
+  verifyAuthToken,
   verifyPassword
 } from "../../utils/auth";
 
@@ -23,12 +23,19 @@ describe("auth utilities", () => {
     await expect(verifyPassword("wrongpass", hash)).resolves.toBe(false);
   });
 
-  it("signs and verifies admin tokens", () => {
-    const token = signAdminToken({ id: 10, username: "admin" });
-    const payload = verifyAdminToken(token);
+  it("signs and verifies auth tokens", () => {
+    const token = signAuthToken({
+      id: 10,
+      email: "admin@hms.local",
+      fullName: "System Admin",
+      role: "ADMIN"
+    });
+
+    const payload = verifyAuthToken(token);
 
     expect(payload.id).toBe(10);
-    expect(payload.username).toBe("admin");
+    expect(payload.email).toBe("admin@hms.local");
+    expect(payload.role).toBe("ADMIN");
   });
 
   it("computes token max age", () => {

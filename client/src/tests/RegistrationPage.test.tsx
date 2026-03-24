@@ -1,8 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { RegistrationPage } from "../pages/RegistrationPage";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PatientsPage } from "../pages/PatientsPage";
 
 const mockedFetch = vi.fn();
 vi.stubGlobal("fetch", mockedFetch);
@@ -14,64 +14,70 @@ const mockJsonResponse = (body: unknown, ok = true, status = 200) =>
     json: async () => body
   });
 
-describe("RegistrationPage", () => {
+describe("PatientsPage", () => {
   beforeEach(() => {
     mockedFetch.mockReset();
-    mockedFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/camps")) {
+    mockedFetch.mockImplementation((url: string, options?: RequestInit) => {
+      if (url.includes("/api/patients") && (!options?.method || options.method === "GET")) {
+        return mockJsonResponse({ patients: [] });
+      }
+
+      if (url.includes("/api/patients") && options?.method === "POST") {
         return mockJsonResponse({
-          camps: [
-            {
-              id: 1,
-              name: "City General Health Camp",
-              date: "2026-04-12T09:00:00.000Z",
-              location: "Cairo Community Clinic",
-              description: "General screening camp",
-              capacity: 60,
-              isActive: true
-            }
-          ]
+          patient: {
+            id: 5,
+            fullName: "Mariam Tarek",
+            dateOfBirth: "1995-07-17T00:00:00.000Z",
+            gender: "Female",
+            phone: "+20 100 555 6677",
+            address: "Maadi",
+            medicalHistory: "Allergy",
+            isDeleted: false,
+            deletedAt: null,
+            createdAt: "2026-03-24T10:00:00.000Z",
+            updatedAt: "2026-03-24T10:00:00.000Z"
+          }
         });
       }
 
-      return mockJsonResponse({ message: "Registration submitted successfully" });
+      return mockJsonResponse({});
     });
   });
 
-  it("shows validation errors when inputs are invalid", async () => {
+  it("shows validation error when required fields are empty", async () => {
     render(
       <MemoryRouter>
-        <RegistrationPage />
+        <PatientsPage />
       </MemoryRouter>
     );
 
-    await screen.findByRole("heading", { name: /Registration/i });
-
-    await userEvent.click(screen.getByRole("button", { name: /Submit Registration/i }));
+    await screen.findByRole("heading", { name: /Patient Management/i });
+    await userEvent.click(screen.getByRole("button", { name: /Add Patient/i }));
 
     expect(
-      await screen.findByText(/Full name must be at least 2 characters/i)
+      await screen.findByText(/Full name, date of birth, gender, phone, and address are required/i)
     ).toBeInTheDocument();
   });
 
-  it("submits valid registration and shows confirmation", async () => {
+  it("creates patient when form is valid", async () => {
     render(
       <MemoryRouter>
-        <RegistrationPage />
+        <PatientsPage />
       </MemoryRouter>
     );
 
-    await screen.findByRole("option", { name: /City General Health Camp/i });
+    await screen.findByRole("heading", { name: /Patient Management/i });
 
-    await userEvent.type(screen.getByLabelText(/Full Name/i), "Nour Hassan");
-    await userEvent.type(screen.getByLabelText(/^Age/i), "33");
-    await userEvent.type(screen.getByLabelText(/Contact Number/i), "+20 101 234 7890");
-    await userEvent.selectOptions(screen.getByLabelText(/Camp Selection/i), "1");
+    await userEvent.type(screen.getByLabelText(/Full Name/i), "Mariam Tarek");
+    await userEvent.type(screen.getByLabelText(/Date of Birth/i), "1995-07-17");
+    await userEvent.type(screen.getByLabelText(/Gender/i), "Female");
+    await userEvent.type(screen.getByLabelText(/Phone/i), "+20 100 555 6677");
+    await userEvent.type(screen.getByLabelText(/Address/i), "Maadi, Cairo");
 
-    await userEvent.click(screen.getByRole("button", { name: /Submit Registration/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Add Patient/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Registration submitted successfully/i)).toBeInTheDocument();
+      expect(screen.getByText(/Patient added successfully/i)).toBeInTheDocument();
     });
   });
 });
