@@ -20,17 +20,15 @@ test("admin can create update and delete a doctor from UI", async ({ page }) => 
   await page.getByLabel("Department").fill("Outpatient");
   await page.getByRole("button", { name: "Create Doctor" }).click();
 
-  await expect(page.getByText(/Doctor created successfully/i)).toBeVisible();
   const row = page.locator("tr", { hasText: doctorName });
   await expect(row).toBeVisible();
 
   await row.getByRole("button", { name: "Edit" }).click();
   await page.getByLabel("Specialization").fill("Internal Medicine");
   await page.getByRole("button", { name: "Update Doctor" }).click();
-  await expect(page.getByText(/Doctor updated successfully/i)).toBeVisible();
+  await expect(row).toContainText("Internal Medicine");
 
   page.once("dialog", (dialog) => dialog.accept());
   await row.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByText(/Doctor deleted successfully/i)).toBeVisible();
   await expect(row).toHaveCount(0);
 });

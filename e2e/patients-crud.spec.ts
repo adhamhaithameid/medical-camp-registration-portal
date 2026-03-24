@@ -21,18 +21,18 @@ test("admin can create update and delete a patient from UI", async ({ page }) =>
   await page.getByLabel("Address").fill("Nasr City, Cairo");
   await page.getByLabel("Medical History").fill("Allergy");
   await page.getByRole("button", { name: "Create Patient" }).click();
+  await expect(page.locator(".toast-title", { hasText: "Patient Created" })).toBeVisible();
 
-  await expect(page.getByText(/Patient created successfully/i)).toBeVisible();
   const row = page.locator("tr", { hasText: patientName });
   await expect(row).toBeVisible();
 
   await row.getByRole("button", { name: "Edit" }).click();
   await page.getByLabel("Address").fill("Heliopolis, Cairo");
   await page.getByRole("button", { name: "Update Patient" }).click();
-  await expect(page.getByText(/Patient updated successfully/i)).toBeVisible();
+  await expect(page.locator(".toast-title", { hasText: "Patient Updated" })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept());
   await row.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByText(/Patient deleted successfully/i)).toBeVisible();
+  await expect(page.locator(".toast-title", { hasText: "Patient Deleted" })).toBeVisible();
   await expect(row).toHaveCount(0);
 });

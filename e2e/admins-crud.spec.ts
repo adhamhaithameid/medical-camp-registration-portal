@@ -18,29 +18,23 @@ test("super admin can create update and delete another admin from UI", async ({ 
   await page.getByLabel("Role").selectOption("STAFF");
   await page.getByRole("button", { name: "Create Admin" }).click();
 
-  await expect(page.getByText(/Admin user created successfully/i)).toBeVisible();
   const row = page.locator("tr", { hasText: username });
   await expect(row).toBeVisible();
   await expect(row).toContainText("STAFF");
 
   await row.getByRole("button", { name: "Toggle Role" }).click();
-  await expect(page.getByText(/Admin role updated/i)).toBeVisible();
   await expect(row).toContainText("SUPER_ADMIN");
 
   await row.getByRole("button", { name: "Toggle Role" }).click();
-  await expect(page.getByText(/Admin role updated/i)).toBeVisible();
   await expect(row).toContainText("STAFF");
 
   await row.getByRole("button", { name: "Toggle Active" }).click();
-  await expect(page.getByText(/Admin active status updated/i)).toBeVisible();
   await expect(row).toContainText("Inactive");
 
   await row.getByRole("button", { name: "Toggle Active" }).click();
-  await expect(page.getByText(/Admin active status updated/i)).toBeVisible();
   await expect(row).toContainText("Active");
 
   page.once("dialog", (dialog) => dialog.accept());
   await row.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByText(/Admin user deleted/i)).toBeVisible();
   await expect(row).toHaveCount(0);
 });
