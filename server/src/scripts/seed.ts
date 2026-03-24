@@ -2,57 +2,141 @@ import { prisma } from "../config/prisma";
 import { getEnv } from "../config/env";
 import { hashPassword } from "../utils/auth";
 
-const sampleCamps = [
+const samplePatients = [
   {
-    name: "City General Health Camp",
-    date: new Date("2026-04-12T09:00:00.000Z"),
-    location: "Cairo Community Clinic",
-    description: "General screening camp focused on preventive health and doctor consultations.",
-    capacity: 60,
-    isActive: true
+    fullName: "Nour Hassan",
+    dateOfBirth: new Date("1992-09-20T00:00:00.000Z"),
+    gender: "Female",
+    phone: "+20 101 111 2233",
+    address: "Nasr City, Cairo",
+    medicalHistory: "Hypertension, annual follow-up needed"
   },
   {
-    name: "Women Wellness Camp",
-    date: new Date("2026-05-08T08:30:00.000Z"),
-    location: "Nasr City Medical Center",
-    description: "Specialized support for women wellness, maternal health, and nutrition guidance.",
-    capacity: 45,
-    isActive: true
+    fullName: "Omar Adel",
+    dateOfBirth: new Date("1988-03-05T00:00:00.000Z"),
+    gender: "Male",
+    phone: "+20 102 333 4455",
+    address: "Heliopolis, Cairo",
+    medicalHistory: "Diabetes Type 2"
+  }
+];
+
+const sampleDoctors = [
+  {
+    fullName: "Dr. Salma Reda",
+    email: "salma.reda@hms.local",
+    phone: "+20 110 000 1001",
+    specialization: "Cardiology",
+    schedule: "Sun-Wed 10:00-16:00"
   },
   {
-    name: "Senior Care Camp",
-    date: new Date("2026-06-21T10:00:00.000Z"),
-    location: "Heliopolis Outreach Hospital",
-    description: "Dedicated camp for geriatric checkups and long-term care planning.",
-    capacity: 40,
-    isActive: true
+    fullName: "Dr. Karim Mostafa",
+    email: "karim.mostafa@hms.local",
+    phone: "+20 110 000 1002",
+    specialization: "Endocrinology",
+    schedule: "Mon-Thu 12:00-18:00"
   }
 ];
 
 export const seedDatabase = async () => {
   const env = getEnv();
-  const passwordHash = await hashPassword(env.ADMIN_PASSWORD);
+  const passwordHash = await hashPassword(env.DEFAULT_USER_PASSWORD);
 
-  await prisma.adminUser.upsert({
-    where: { username: env.ADMIN_USERNAME },
-    update: { passwordHash },
+  await prisma.user.upsert({
+    where: { email: env.DEFAULT_USER_EMAIL },
+    update: {
+      fullName: env.DEFAULT_USER_FULL_NAME,
+      passwordHash,
+      role: "ADMIN"
+    },
     create: {
-      username: env.ADMIN_USERNAME,
-      passwordHash
+      fullName: env.DEFAULT_USER_FULL_NAME,
+      email: env.DEFAULT_USER_EMAIL,
+      passwordHash,
+      role: "ADMIN"
     }
   });
 
-  for (const camp of sampleCamps) {
-    const existing = await prisma.camp.findFirst({
+  for (const patient of samplePatients) {
+    const existing = await prisma.patient.findFirst({
       where: {
-        name: camp.name,
-        location: camp.location,
-        date: camp.date
+        fullName: patient.fullName,
+        phone: patient.phone,
+        isDeleted: false
       }
     });
 
     if (!existing) {
-      await prisma.camp.create({ data: camp });
+      await prisma.patient.create({ data: patient });
+    }
+  }
+
+  for (const doctor of sampleDoctors) {
+    await prisma.doctor.upsert({
+      where: { email: doctor.email },
+      update: {
+        fullName: doctor.fullName,
+        phone: doctor.phone,
+        specialization: doctor.specialization,
+        schedule: doctor.schedule
+      },
+      create: doctor
+    });
+  }
+
+  const patient = await prisma.patient.findFirst({
+    where: { isDeleted: false },
+    orderBy: { id: "asc" }
+  });
+
+  const doctor = await prisma.doctor.findFirst({
+    orderBy: { id: "asc" }
+  });
+
+  if (patient && doctor) {
+    const scheduledAt = new Date("2026-04-15T10:30:00.000Z");
+
+    const existingAppointment = await prisma.appointment.findFirst({
+      where: {
+        patientId: patient.id,
+        doctorId: doctor.id,
+        scheduledAt
+      }
+    });
+
+    if (!existingAppointment) {
+      const appointment = await prisma.appointment.create({
+        data: {
+          patientId: patient.id,
+          doctorId: doctor.id,
+          scheduledAt,
+          reason: "Routine checkup"
+        }
+      });
+
+      await prisma.invoice.create({
+        data: {
+          patientId: patient.id,
+          appointmentId: appointment.id,
+          totalCost: 550,
+          items: {
+            create: [
+              {
+                description: "Consultation",
+                quantity: 1,
+                unitPrice: 400,
+                lineTotal: 400
+              },
+              {
+                description: "Lab tests",
+                quantity: 1,
+                unitPrice: 150,
+                lineTotal: 150
+              }
+            ]
+          }
+        }
+      });
     }
   }
 };

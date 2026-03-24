@@ -13,8 +13,9 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   JWT_SECRET: z.string().min(10).default("replace-this-secret"),
   JWT_EXPIRES_IN: z.string().default("8h"),
-  ADMIN_USERNAME: z.string().default("admin"),
-  ADMIN_PASSWORD: z.string().min(8).default("admin12345")
+  DEFAULT_USER_FULL_NAME: z.string().default("System Admin"),
+  DEFAULT_USER_EMAIL: z.string().email().default("admin@hms.local"),
+  DEFAULT_USER_PASSWORD: z.string().min(8).default("admin12345")
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
