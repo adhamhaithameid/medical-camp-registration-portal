@@ -1,0 +1,12 @@
+.git
+.gitignore
+node_modules
+**/node_modules
+.pnpm-store
+client/dist
+server/dist
+shared/dist
+coverage
+playwright-report
+test-results
+.DS_Store
