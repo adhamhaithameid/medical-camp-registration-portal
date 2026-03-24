@@ -149,6 +149,24 @@ usersRouter.get("/", async (_request, response) => {
   return response.status(200).json({ users: users.map(mapAdminUser) });
 });
 
+usersRouter.get("/:id", async (request, response) => {
+  const userId = Number(request.params.id);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return response.status(400).json({ message: "Invalid user id" });
+  }
+
+  const user = await prisma.adminUser.findUnique({
+    where: { id: userId }
+  });
+
+  if (!user) {
+    return response.status(404).json({ message: "User not found" });
+  }
+
+  return response.status(200).json({ user: mapAdminUser(user) });
+});
+
 usersRouter.post("/", async (request, response) => {
   const parsed = createAdminUserSchema.safeParse(request.body);
 
@@ -236,6 +254,58 @@ usersRouter.patch("/:id", async (request, response) => {
   });
 
   return response.status(200).json({ user: mapAdminUser(updated) });
+});
+
+usersRouter.delete("/:id", async (request, response) => {
+  const userId = Number(request.params.id);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return response.status(400).json({ message: "Invalid user id" });
+  }
+
+  if (request.user?.id === userId) {
+    return response.status(409).json({ message: "You cannot delete your own active account" });
+  }
+
+  const existing = await prisma.adminUser.findUnique({
+    where: { id: userId }
+  });
+
+  if (!existing) {
+    return response.status(404).json({ message: "User not found" });
+  }
+
+  if (existing.role === "SUPER_ADMIN") {
+    const superAdminCount = await prisma.adminUser.count({
+      where: {
+        role: "SUPER_ADMIN",
+        isActive: true
+      }
+    });
+
+    if (superAdminCount <= 1) {
+      return response
+        .status(409)
+        .json({ message: "Cannot delete the last active super admin account" });
+    }
+  }
+
+  const deleted = await prisma.adminUser.delete({
+    where: { id: userId }
+  });
+
+  await recordAudit({
+    request,
+    action: "ADMIN_USER_DELETE",
+    entityType: "AdminUser",
+    entityId: String(deleted.id),
+    details: {
+      username: deleted.username,
+      role: deleted.role
+    }
+  });
+
+  return response.status(200).json({ user: mapAdminUser(deleted) });
 });
 
 export { authRouter, usersRouter };

@@ -32,6 +32,46 @@ const sampleCamps = [
   }
 ];
 
+const samplePatients = [
+  {
+    fullName: "Nour Hassan",
+    dateOfBirth: new Date("1992-09-20T00:00:00.000Z"),
+    gender: "Female",
+    contactNumber: "+20 101 111 2233",
+    email: "nour.hassan@example.com",
+    address: "Nasr City, Cairo",
+    medicalHistory: "Hypertension"
+  },
+  {
+    fullName: "Omar Adel",
+    dateOfBirth: new Date("1988-03-05T00:00:00.000Z"),
+    gender: "Male",
+    contactNumber: "+20 102 333 4455",
+    email: "omar.adel@example.com",
+    address: "Heliopolis, Cairo",
+    medicalHistory: "Type 2 diabetes"
+  }
+];
+
+const sampleDoctors = [
+  {
+    fullName: "Dr. Salma Reda",
+    email: "salma.reda@hospital.local",
+    contactNumber: "+20 110 000 1001",
+    specialization: "Cardiology",
+    department: "Internal Medicine",
+    isActive: true
+  },
+  {
+    fullName: "Dr. Karim Mostafa",
+    email: "karim.mostafa@hospital.local",
+    contactNumber: "+20 110 000 1002",
+    specialization: "Endocrinology",
+    department: "Internal Medicine",
+    isActive: true
+  }
+];
+
 const bootstrapAdminUsers = async () => {
   const env = getEnv();
 
@@ -149,10 +189,43 @@ const bootstrapRegistrations = async () => {
   }
 };
 
+const bootstrapPatients = async () => {
+  for (const patient of samplePatients) {
+    const existing = await prisma.patient.findFirst({
+      where: {
+        fullName: patient.fullName,
+        contactNumber: patient.contactNumber
+      }
+    });
+
+    if (!existing) {
+      await prisma.patient.create({ data: patient });
+      continue;
+    }
+
+    await prisma.patient.update({
+      where: { id: existing.id },
+      data: patient
+    });
+  }
+};
+
+const bootstrapDoctors = async () => {
+  for (const doctor of sampleDoctors) {
+    await prisma.doctor.upsert({
+      where: { email: doctor.email },
+      update: doctor,
+      create: doctor
+    });
+  }
+};
+
 export const seedDatabase = async () => {
   await bootstrapAdminUsers();
   await bootstrapCamps();
   await bootstrapRegistrations();
+  await bootstrapPatients();
+  await bootstrapDoctors();
 };
 
 if (require.main === module) {

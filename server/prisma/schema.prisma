@@ -48,6 +48,36 @@ model AdminUser {
   auditLogs    AuditLog[]
 }
 
+model Patient {
+  id             Int      @id @default(autoincrement())
+  fullName       String
+  dateOfBirth    DateTime
+  gender         String
+  contactNumber  String
+  email          String?
+  address        String
+  medicalHistory String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([fullName])
+  @@index([contactNumber])
+}
+
+model Doctor {
+  id             Int      @id @default(autoincrement())
+  fullName       String
+  email          String   @unique
+  contactNumber  String
+  specialization String
+  department     String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([fullName, isActive])
+}
+
 model Camp {
   id            Int            @id @default(autoincrement())
   name          String

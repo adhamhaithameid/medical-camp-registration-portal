@@ -95,6 +95,69 @@ export interface AdminUser {
   updatedAt: string;
 }
 
+export interface Patient {
+  id: number;
+  fullName: string;
+  dateOfBirth: string;
+  gender: string;
+  contactNumber: string;
+  email?: string | null;
+  address: string;
+  medicalHistory?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatientInput {
+  fullName: string;
+  dateOfBirth: string;
+  gender: string;
+  contactNumber: string;
+  email?: string;
+  address: string;
+  medicalHistory?: string;
+}
+
+export interface PatientUpdateInput {
+  fullName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  contactNumber?: string;
+  email?: string | null;
+  address?: string;
+  medicalHistory?: string | null;
+}
+
+export interface Doctor {
+  id: number;
+  fullName: string;
+  email: string;
+  contactNumber: string;
+  specialization: string;
+  department?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DoctorInput {
+  fullName: string;
+  email: string;
+  contactNumber: string;
+  specialization: string;
+  department?: string;
+  isActive?: boolean;
+}
+
+export interface DoctorUpdateInput {
+  fullName?: string;
+  email?: string;
+  contactNumber?: string;
+  specialization?: string;
+  department?: string | null;
+  isActive?: boolean;
+}
+
 export interface CreateAdminUserInput {
   username: string;
   password: string;
@@ -154,6 +217,22 @@ export interface AdminUsersResponse {
 
 export interface AdminUserResponse {
   user: AdminUser;
+}
+
+export interface PatientsResponse {
+  patients: Patient[];
+}
+
+export interface PatientResponse {
+  patient: Patient;
+}
+
+export interface DoctorsResponse {
+  doctors: Doctor[];
+}
+
+export interface DoctorResponse {
+  doctor: Doctor;
 }
 
 export interface NotificationLogsResponse {

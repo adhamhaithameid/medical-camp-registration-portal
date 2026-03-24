@@ -1,13 +1,17 @@
 import type {
   AdminUser,
   Camp,
+  Doctor,
   NotificationLogRecord,
+  Patient,
   RegistrationRecord
 } from "@medical-camp/shared";
 import type {
   AdminUser as PrismaAdminUser,
   Camp as PrismaCamp,
+  Doctor as PrismaDoctor,
   NotificationLog as PrismaNotificationLog,
+  Patient as PrismaPatient,
   Registration as PrismaRegistration
 } from "@prisma/client";
 
@@ -67,6 +71,31 @@ export const mapAdminUser = (user: PrismaAdminUser): AdminUser => ({
   isActive: user.isActive,
   createdAt: user.createdAt.toISOString(),
   updatedAt: user.updatedAt.toISOString()
+});
+
+export const mapPatient = (patient: PrismaPatient): Patient => ({
+  id: patient.id,
+  fullName: patient.fullName,
+  dateOfBirth: patient.dateOfBirth.toISOString(),
+  gender: patient.gender,
+  contactNumber: patient.contactNumber,
+  email: patient.email,
+  address: patient.address,
+  medicalHistory: patient.medicalHistory,
+  createdAt: patient.createdAt.toISOString(),
+  updatedAt: patient.updatedAt.toISOString()
+});
+
+export const mapDoctor = (doctor: PrismaDoctor): Doctor => ({
+  id: doctor.id,
+  fullName: doctor.fullName,
+  email: doctor.email,
+  contactNumber: doctor.contactNumber,
+  specialization: doctor.specialization,
+  department: doctor.department,
+  isActive: doctor.isActive,
+  createdAt: doctor.createdAt.toISOString(),
+  updatedAt: doctor.updatedAt.toISOString()
 });
 
 export const mapNotificationLog = (
