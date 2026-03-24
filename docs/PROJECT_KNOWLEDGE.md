@@ -7,6 +7,10 @@ This monorepo implements a full-stack Medical Camp Registration Portal using:
 - `shared/`: shared TypeScript contracts
 
 The implementation includes:
+- Hospital core modules with full CRUD:
+  - Patients management (`/api/admin/patients`)
+  - Doctors management (`/api/admin/doctors`)
+  - Admin accounts management (`/api/admin/users`)
 - Public camp browsing and registration
 - Capacity visibility and automatic waitlisting when camps are full
 - Confirmation-code based registration lookup/edit/cancel
@@ -22,6 +26,8 @@ The implementation includes:
 ### Backend (Express API)
 - **Routing modules**
   - `routes/auth.ts`: admin login/logout/status + super-admin user management
+  - `routes/patients.ts`: patient CRUD
+  - `routes/doctors.ts`: doctor CRUD
   - `routes/camps.ts`: public camps + admin camp CRUD/deactivate
   - `routes/registrations.ts`: public registration lifecycle + admin registration tools
 - **Middleware**
@@ -39,6 +45,9 @@ The implementation includes:
   - Home, Camp Details, Registration, Registration Management, Contact
 - Admin pages:
   - Admin Login
+  - Patients Management (CRUD)
+  - Doctors Management (CRUD)
+  - Admin Users Management (CRUD, super admin only)
   - Admin Registrations (search/filter/pagination/export/promote)
   - Admin Camps (create/edit/deactivate)
 - Auth state is managed through `AuthProvider` with protected route gating by role.
@@ -50,6 +59,12 @@ The implementation includes:
 
 ### `Camp`
 - `id`, `name`, `date`, `location`, `description`, `capacity`, `isActive`, timestamps
+
+### `Patient`
+- `id`, `fullName`, `dateOfBirth`, `gender`, `contactNumber`, `email`, `address`, `medicalHistory`, timestamps
+
+### `Doctor`
+- `id`, `fullName`, `email`, `contactNumber`, `specialization`, `department`, `isActive`, timestamps
 
 ### `Registration`
 - `id`, participant fields (`fullName`, `age`, `contactNumber`, `email`)
@@ -92,8 +107,20 @@ The implementation includes:
 - `PATCH /api/admin/registrations/:id/promote` (`STAFF` or `SUPER_ADMIN`)
 - `GET /api/admin/registrations/:id/notifications` (`STAFF` or `SUPER_ADMIN`)
 - `GET /api/admin/users` (`SUPER_ADMIN`)
+- `GET /api/admin/users/:id` (`SUPER_ADMIN`)
 - `POST /api/admin/users` (`SUPER_ADMIN`)
 - `PATCH /api/admin/users/:id` (`SUPER_ADMIN`)
+- `DELETE /api/admin/users/:id` (`SUPER_ADMIN`)
+- `GET /api/admin/patients` (`STAFF` or `SUPER_ADMIN`)
+- `GET /api/admin/patients/:id` (`STAFF` or `SUPER_ADMIN`)
+- `POST /api/admin/patients` (`STAFF` or `SUPER_ADMIN`)
+- `PATCH /api/admin/patients/:id` (`STAFF` or `SUPER_ADMIN`)
+- `DELETE /api/admin/patients/:id` (`STAFF` or `SUPER_ADMIN`)
+- `GET /api/admin/doctors` (`STAFF` or `SUPER_ADMIN`)
+- `GET /api/admin/doctors/:id` (`STAFF` or `SUPER_ADMIN`)
+- `POST /api/admin/doctors` (`STAFF` or `SUPER_ADMIN`)
+- `PATCH /api/admin/doctors/:id` (`STAFF` or `SUPER_ADMIN`)
+- `DELETE /api/admin/doctors/:id` (`STAFF` or `SUPER_ADMIN`)
 
 ## Business Rules Implemented
 
@@ -116,6 +143,11 @@ The implementation includes:
 ### Role-Based Admin
 - `SUPER_ADMIN`: full management (users + camps + all staff abilities)
 - `STAFF`: registrations and reporting access (view/filter/export/promote)
+
+### HMS CRUD Coverage
+- Patients: create, list, get-by-id, update, delete
+- Doctors: create, list, get-by-id, update, delete
+- Admin users: create, list, get-by-id, update, delete (with safeguards against deleting self/last active super admin)
 
 ## Notifications
 - Registration events trigger email and SMS delivery attempts.
