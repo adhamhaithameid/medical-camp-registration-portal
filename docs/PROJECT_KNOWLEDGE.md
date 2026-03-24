@@ -92,8 +92,8 @@ Defined in `shared/src/contracts.ts`:
 
 ## 9. Database Setup and Seed
 Commands:
-- `npm run db:deploy`
-- `npm run db:seed`
+- `pnpm db:deploy`
+- `pnpm db:seed`
 
 Seed creates:
 - default admin user from env (`ADMIN_USERNAME` / `ADMIN_PASSWORD`)
