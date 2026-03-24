@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Camp {
+  id            Int            @id @default(autoincrement())
+  name          String
+  date          DateTime
+  location      String
+  description   String
+  capacity      Int
+  isActive      Boolean        @default(true)
+  registrations Registration[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Registration {
+  id            Int      @id @default(autoincrement())
+  fullName      String
+  age           Int
+  contactNumber String
+  campId        Int
+  camp          Camp     @relation(fields: [campId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+}
+
+model AdminUser {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
