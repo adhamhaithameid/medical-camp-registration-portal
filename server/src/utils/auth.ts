@@ -1,16 +1,15 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import ms from "ms";
-import type { UserRole } from "@prisma/client";
+import type { AdminRole } from "@prisma/client";
 import { getEnv } from "../config/env";
 
-export const AUTH_COOKIE_NAME = "hms_auth_token";
+export const AUTH_COOKIE_NAME = "mcamp_admin_token";
 
 export interface AuthTokenPayload {
   id: number;
-  email: string;
-  fullName: string;
-  role: UserRole;
+  username: string;
+  role: AdminRole;
 }
 
 export const hashPassword = async (plainText: string) => {

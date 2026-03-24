@@ -13,9 +13,22 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   JWT_SECRET: z.string().min(10).default("replace-this-secret"),
   JWT_EXPIRES_IN: z.string().default("8h"),
-  DEFAULT_USER_FULL_NAME: z.string().default("System Admin"),
-  DEFAULT_USER_EMAIL: z.string().email().default("admin@hms.local"),
-  DEFAULT_USER_PASSWORD: z.string().min(8).default("admin12345")
+  DEFAULT_SUPER_ADMIN_USERNAME: z.string().default("admin"),
+  DEFAULT_SUPER_ADMIN_PASSWORD: z.string().min(8).default("admin12345"),
+  DEFAULT_STAFF_USERNAME: z.string().default("staff"),
+  DEFAULT_STAFF_PASSWORD: z.string().min(8).default("staff12345"),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z
+    .string()
+    .optional()
+    .transform((value) => (value ? Number(value) : undefined)),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_FROM_NUMBER: z.string().optional(),
+  DEFAULT_NOTIFICATION_EMAIL_DOMAIN: z.string().default("camp.local")
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

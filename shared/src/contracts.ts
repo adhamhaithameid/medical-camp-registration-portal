@@ -1,14 +1,79 @@
-export type UserRole = "ADMIN" | "STAFF" | "RECEPTIONIST";
+export type AdminRole = "SUPER_ADMIN" | "STAFF";
+export type RegistrationStatus = "CONFIRMED" | "WAITLISTED" | "CANCELLED";
+export type NotificationChannel = "EMAIL" | "SMS";
+export type NotificationEvent =
+  | "REGISTERED"
+  | "UPDATED"
+  | "CANCELLED"
+  | "PROMOTED"
+  | "WAITLISTED";
+
+export interface Camp {
+  id: number;
+  name: string;
+  date: string;
+  location: string;
+  description: string;
+  capacity: number;
+  isActive: boolean;
+  confirmedCount: number;
+  waitlistCount: number;
+  remainingSeats: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampInput {
+  name: string;
+  date: string;
+  location: string;
+  description: string;
+  capacity: number;
+  isActive?: boolean;
+}
+
+export interface RegistrationInput {
+  fullName: string;
+  age: number;
+  contactNumber: string;
+  email?: string;
+  campId: number;
+}
+
+export interface RegistrationUpdateInput {
+  fullName?: string;
+  age?: number;
+  contactNumber?: string;
+  email?: string | null;
+}
+
+export interface RegistrationRecord {
+  id: number;
+  fullName: string;
+  age: number;
+  contactNumber: string;
+  email?: string | null;
+  campId: number;
+  campName?: string;
+  campDate?: string;
+  status: RegistrationStatus;
+  confirmationCode: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  cancelledAt?: string | null;
+}
 
 export interface AuthUser {
   id: number;
-  fullName: string;
-  email: string;
-  role: UserRole;
+  username: string;
+  role: AdminRole;
 }
 
 export interface AuthResult {
   authenticated: boolean;
+  adminUsername?: string;
+  role?: AdminRole;
   user?: AuthUser;
 }
 
@@ -16,180 +81,83 @@ export interface AuthStatusResponse {
   auth: AuthResult;
 }
 
-export interface RegisterInput {
-  fullName: string;
-  email: string;
-  password: string;
-  role?: UserRole;
-}
-
 export interface LoginInput {
-  email: string;
+  username: string;
   password: string;
 }
 
-export interface Patient {
+export interface AdminUser {
   id: number;
-  fullName: string;
-  dateOfBirth: string;
-  gender: string;
-  phone: string;
-  address: string;
-  medicalHistory?: string | null;
-  isDeleted: boolean;
-  deletedAt?: string | null;
+  username: string;
+  role: AdminRole;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface PatientInput {
-  fullName: string;
-  dateOfBirth: string;
-  gender: string;
-  phone: string;
-  address: string;
-  medicalHistory?: string;
+export interface CreateAdminUserInput {
+  username: string;
+  password: string;
+  role: AdminRole;
 }
 
-export interface Doctor {
+export interface UpdateAdminUserInput {
+  role?: AdminRole;
+  isActive?: boolean;
+  password?: string;
+}
+
+export interface NotificationLogRecord {
   id: number;
-  fullName: string;
-  email: string;
-  phone: string;
-  specialization: string;
-  schedule: string;
+  registrationId: number;
+  channel: NotificationChannel;
+  event: NotificationEvent;
+  destination?: string | null;
+  status: "SENT" | "FAILED" | "SKIPPED";
+  message: string;
+  errorMessage?: string | null;
   createdAt: string;
-  updatedAt: string;
 }
 
-export interface DoctorInput {
-  fullName: string;
-  email: string;
-  phone: string;
-  specialization: string;
-  schedule: string;
+export interface CampsResponse {
+  camps: Camp[];
 }
 
-export type AppointmentStatus = "BOOKED" | "CANCELLED" | "RESCHEDULED" | "COMPLETED";
-
-export interface Appointment {
-  id: number;
-  patientId: number;
-  doctorId: number;
-  scheduledAt: string;
-  status: AppointmentStatus;
-  reason?: string | null;
-  cancelReason?: string | null;
-  rescheduleReason?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  patientName?: string;
-  doctorName?: string;
-  doctorSpecialization?: string;
+export interface CampResponse {
+  camp: Camp;
 }
 
-export interface AppointmentInput {
-  patientId: number;
-  doctorId: number;
-  scheduledAt: string;
-  reason?: string;
+export interface RegistrationResponse {
+  registration: RegistrationRecord;
 }
 
-export interface RescheduleAppointmentInput {
-  scheduledAt: string;
-  reason?: string;
+export interface RegistrationLookupResponse {
+  registration: RegistrationRecord;
+  camp: Camp;
 }
 
-export interface CancelAppointmentInput {
-  reason?: string;
+export interface PaginatedMeta {
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
-export type InvoiceStatus = "UNPAID" | "PAID";
-
-export interface InvoiceItemInput {
-  description: string;
-  quantity: number;
-  unitPrice: number;
+export interface AdminRegistrationsResponse {
+  registrations: RegistrationRecord[];
+  meta: PaginatedMeta;
 }
 
-export interface InvoiceItem {
-  id: number;
-  invoiceId: number;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  lineTotal: number;
+export interface AdminUsersResponse {
+  users: AdminUser[];
 }
 
-export interface Invoice {
-  id: number;
-  patientId: number;
-  appointmentId?: number | null;
-  status: InvoiceStatus;
-  totalCost: number;
-  paymentMethod?: string | null;
-  paidAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  patientName?: string;
-  appointmentScheduledAt?: string | null;
-  items: InvoiceItem[];
+export interface AdminUserResponse {
+  user: AdminUser;
 }
 
-export interface GenerateInvoiceInput {
-  patientId: number;
-  appointmentId?: number;
-  items: InvoiceItemInput[];
-}
-
-export interface BillingCalculateInput {
-  items: InvoiceItemInput[];
-}
-
-export interface ProcessPaymentInput {
-  paymentMethod: string;
-}
-
-export interface PatientsResponse {
-  patients: Patient[];
-}
-
-export interface PatientResponse {
-  patient: Patient;
-}
-
-export interface PatientHistoryResponse {
-  patient: Patient;
-  appointments: Appointment[];
-  invoices: Invoice[];
-}
-
-export interface DoctorsResponse {
-  doctors: Doctor[];
-}
-
-export interface DoctorResponse {
-  doctor: Doctor;
-}
-
-export interface AppointmentsResponse {
-  appointments: Appointment[];
-}
-
-export interface AppointmentResponse {
-  appointment: Appointment;
-}
-
-export interface InvoicesResponse {
-  invoices: Invoice[];
-}
-
-export interface InvoiceResponse {
-  invoice: Invoice;
-}
-
-export interface BillingTotalResponse {
-  totalCost: number;
+export interface NotificationLogsResponse {
+  notifications: NotificationLogRecord[];
 }
 
 export interface ApiErrorResponse {

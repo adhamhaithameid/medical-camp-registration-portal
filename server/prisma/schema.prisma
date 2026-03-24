@@ -7,104 +7,113 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  ADMIN
+enum AdminRole {
+  SUPER_ADMIN
   STAFF
-  RECEPTIONIST
 }
 
-enum AppointmentStatus {
-  BOOKED
+enum RegistrationStatus {
+  CONFIRMED
+  WAITLISTED
   CANCELLED
-  RESCHEDULED
-  COMPLETED
 }
 
-enum InvoiceStatus {
-  UNPAID
-  PAID
+enum NotificationChannel {
+  EMAIL
+  SMS
 }
 
-model User {
-  id           Int      @id @default(autoincrement())
-  fullName     String
-  email        String   @unique
+enum NotificationEvent {
+  REGISTERED
+  UPDATED
+  CANCELLED
+  PROMOTED
+  WAITLISTED
+}
+
+enum NotificationStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model AdminUser {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
   passwordHash String
-  role         UserRole @default(STAFF)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         AdminRole @default(STAFF)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  auditLogs    AuditLog[]
 }
 
-model Patient {
-  id             Int           @id @default(autoincrement())
-  fullName       String
-  dateOfBirth    DateTime
-  gender         String
-  phone          String
-  address        String
-  medicalHistory String?
-  isDeleted      Boolean       @default(false)
-  deletedAt      DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  appointments   Appointment[]
-  invoices       Invoice[]
+model Camp {
+  id            Int            @id @default(autoincrement())
+  name          String
+  date          DateTime
+  location      String
+  description   String
+  capacity      Int
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  registrations Registration[]
+
+  @@index([date])
+  @@index([isActive, date])
 }
 
-model Doctor {
-  id             Int           @id @default(autoincrement())
-  fullName       String
-  email          String        @unique
-  phone          String
-  specialization String
-  schedule       String
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  appointments   Appointment[]
+model Registration {
+  id               Int                @id @default(autoincrement())
+  fullName         String
+  age              Int
+  contactNumber    String
+  email            String?
+  campId           Int
+  status           RegistrationStatus @default(CONFIRMED)
+  confirmationCode String             @unique
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  cancelledAt      DateTime?
+  camp             Camp               @relation(fields: [campId], references: [id], onDelete: Restrict)
+  notifications    NotificationLog[]
+
+  @@index([campId, status, createdAt])
+  @@index([contactNumber, campId])
+  @@index([confirmationCode])
 }
 
-model Appointment {
-  id               Int               @id @default(autoincrement())
-  patientId        Int
-  doctorId         Int
-  scheduledAt      DateTime
-  status           AppointmentStatus @default(BOOKED)
-  reason           String?
-  cancelReason     String?
-  rescheduleReason String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  patient          Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  doctor           Doctor            @relation(fields: [doctorId], references: [id], onDelete: Restrict)
-  invoice          Invoice?
+model NotificationLog {
+  id             Int                 @id @default(autoincrement())
+  registrationId Int
+  channel        NotificationChannel
+  event          NotificationEvent
+  destination    String?
+  status         NotificationStatus
+  message        String
+  errorMessage   String?
+  createdAt      DateTime            @default(now())
+  registration   Registration        @relation(fields: [registrationId], references: [id], onDelete: Cascade)
 
-  @@index([patientId, scheduledAt])
-  @@index([doctorId, scheduledAt])
+  @@index([registrationId, createdAt])
+  @@index([event, createdAt])
 }
 
-model Invoice {
-  id            Int           @id @default(autoincrement())
-  patientId     Int
-  appointmentId Int?          @unique
-  status        InvoiceStatus @default(UNPAID)
-  totalCost     Float
-  paymentMethod String?
-  paidAt        DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  items         InvoiceItem[]
+model AuditLog {
+  id          Int       @id @default(autoincrement())
+  actorId     Int?
+  actorRole   AdminRole?
+  action      String
+  entityType  String
+  entityId    String
+  detailsJson String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+  actor       AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
-  @@index([patientId, createdAt])
-}
-
-model InvoiceItem {
-  id          Int     @id @default(autoincrement())
-  invoiceId   Int
-  description String
-  quantity    Int
-  unitPrice   Float
-  lineTotal   Float
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  @@index([entityType, entityId, createdAt])
+  @@index([action, createdAt])
 }

@@ -3,7 +3,7 @@ import type { AuthTokenPayload } from "../utils/auth";
 declare global {
   namespace Express {
     interface Request {
-      user?: Pick<AuthTokenPayload, "id" | "email" | "fullName" | "role">;
+      user?: Pick<AuthTokenPayload, "id" | "username" | "role">;
     }
   }
 }
