@@ -39,7 +39,7 @@ export const ProtectedRoute = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
   }
 
   return <Outlet />;

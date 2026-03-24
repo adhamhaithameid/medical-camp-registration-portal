@@ -3,18 +3,27 @@ import { Link } from "react-router-dom";
 export const HomePage = () => {
   return (
     <section className="hero-section">
-      <p className="eyebrow">Community health, simplified coordination</p>
-      <h2>Find nearby medical camps and reserve your participation in minutes.</h2>
+      <p className="eyebrow">Architecture. Modularity. Low coupling.</p>
+      <h2>Hospital Management System</h2>
       <p>
-        This portal helps participants discover upcoming camps, submit registration forms,
-        and receive confirmation in one clear journey.
+        Manage patients, doctors, appointments, billing, and authentication workflows in one
+        cohesive platform.
       </p>
+
+      <ul className="module-list">
+        <li>Patient Management: add, update, history, soft delete</li>
+        <li>Doctor Management: profile, specialization, schedule</li>
+        <li>Appointment System: book, cancel, reschedule, view</li>
+        <li>Billing System: invoice, total cost, payment, history</li>
+        <li>Authentication System: registration, login, logout</li>
+      </ul>
+
       <div className="hero-actions">
-        <Link className="btn btn-primary" to="/camps">
-          Explore Camps
+        <Link className="btn btn-primary" to="/auth">
+          Login / Register
         </Link>
-        <Link className="btn btn-secondary" to="/register">
-          Register Now
+        <Link className="btn btn-secondary" to="/patients">
+          Open HMS Modules
         </Link>
       </div>
     </section>

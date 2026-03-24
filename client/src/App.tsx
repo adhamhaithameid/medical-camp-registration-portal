@@ -1,27 +1,25 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AppointmentsPage } from "./pages/AppointmentsPage";
+import { AuthPage } from "./pages/AuthPage";
+import { BillingPage } from "./pages/BillingPage";
+import { DoctorsPage } from "./pages/DoctorsPage";
 import { HomePage } from "./pages/HomePage";
-import { CampsPage } from "./pages/CampsPage";
-import { CampDetailsPage } from "./pages/CampDetailsPage";
-import { RegistrationPage } from "./pages/RegistrationPage";
-import { ContactPage } from "./pages/ContactPage";
-import { AdminLoginPage } from "./pages/AdminLoginPage";
-import { AdminRegistrationsPage } from "./pages/AdminRegistrationsPage";
+import { PatientsPage } from "./pages/PatientsPage";
 
 export const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
         <Route index element={<HomePage />} />
-        <Route path="camps" element={<CampsPage />} />
-        <Route path="camps/:campId" element={<CampDetailsPage />} />
-        <Route path="register" element={<RegistrationPage />} />
-        <Route path="contact" element={<ContactPage />} />
-        <Route path="admin/login" element={<AdminLoginPage />} />
+        <Route path="auth" element={<AuthPage />} />
 
         <Route element={<ProtectedRoute />}>
-          <Route path="admin/registrations" element={<AdminRegistrationsPage />} />
+          <Route path="patients" element={<PatientsPage />} />
+          <Route path="doctors" element={<DoctorsPage />} />
+          <Route path="appointments" element={<AppointmentsPage />} />
+          <Route path="billing" element={<BillingPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
