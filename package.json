@@ -3,11 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "packageManager": "pnpm@10.25.0",
-  "workspaces": [
-    "client",
-    "server",
-    "shared"
-  ],
   "scripts": {
     "build": "pnpm --filter @medical-camp/shared build && pnpm --filter server build && pnpm --filter client build",
     "dev": "pnpm db:deploy && pnpm db:seed && pnpm -r --parallel --filter server --filter client dev",
