@@ -1,60 +1,32 @@
-import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import type { AuthResult } from "@medical-camp/shared";
-import { api } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 
-const links = [
+const publicLinks = [
   { to: "/", label: "Home", end: true },
-  { to: "/patients", label: "Patients" },
-  { to: "/doctors", label: "Doctors" },
-  { to: "/appointments", label: "Appointments" },
-  { to: "/billing", label: "Billing" }
+  { to: "/register", label: "Register" },
+  { to: "/registration/manage", label: "Manage Registration" },
+  { to: "/contact", label: "Contact" }
 ];
 
 export const Layout = () => {
   const navigate = useNavigate();
-  const [auth, setAuth] = useState<AuthResult>({ authenticated: false });
-
-  useEffect(() => {
-    let ignore = false;
-
-    const loadStatus = async () => {
-      try {
-        const status = await api.getAuthStatus();
-
-        if (!ignore) {
-          setAuth(status);
-        }
-      } catch {
-        if (!ignore) {
-          setAuth({ authenticated: false });
-        }
-      }
-    };
-
-    loadStatus();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  const { auth, logout } = useAuth();
 
   const handleLogout = async () => {
-    await api.logout();
-    setAuth({ authenticated: false });
-    navigate("/auth", { replace: true });
+    await logout();
+    navigate("/admin/login", { replace: true });
   };
 
   return (
     <div className="app-shell">
       <header className="site-header">
         <div className="brand-block">
-          <p className="badge">HMS</p>
-          <h1>Hospital Management System</h1>
+          <p className="badge">MCAMP</p>
+          <h1>Medical Camp Registration Portal</h1>
         </div>
 
         <nav className="main-nav" aria-label="Main navigation">
-          {links.map((link) => (
+          {publicLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -66,21 +38,43 @@ export const Layout = () => {
               {link.label}
             </NavLink>
           ))}
+          {auth.authenticated && (
+            <>
+              <NavLink
+                to="/admin/registrations"
+                className={({ isActive }) =>
+                  isActive ? "nav-link nav-link-active" : "nav-link"
+                }
+              >
+                Admin Registrations
+              </NavLink>
+              {auth.role === "SUPER_ADMIN" && (
+                <NavLink
+                  to="/admin/camps"
+                  className={({ isActive }) =>
+                    isActive ? "nav-link nav-link-active" : "nav-link"
+                  }
+                >
+                  Camp Management
+                </NavLink>
+              )}
+            </>
+          )}
         </nav>
 
         <div className="auth-block">
           {auth.authenticated && auth.user ? (
             <>
               <p>
-                {auth.user.fullName} ({auth.user.role})
+                {auth.user.username} ({auth.user.role})
               </p>
               <button className="btn btn-secondary" onClick={handleLogout} type="button">
                 Logout
               </button>
             </>
           ) : (
-            <Link className="btn btn-primary" to="/auth">
-              Login
+            <Link className="btn btn-primary" to="/admin/login">
+              Admin Login
             </Link>
           )}
         </div>

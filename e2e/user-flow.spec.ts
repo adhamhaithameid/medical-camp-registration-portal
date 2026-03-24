@@ -1,24 +1,21 @@
 import { expect, test } from "@playwright/test";
 
-test("user can login and add patient", async ({ page }) => {
-  await page.goto("/auth");
+test("user can browse camps and submit registration", async ({ page }) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: /Find A Medical Camp And Register In Minutes/i })
+  ).toBeVisible();
 
-  await page.getByLabel("Email").fill("admin@hms.local");
-  await page.getByLabel("Password").fill("admin12345");
-  await page.getByRole("button", { name: "Sign In" }).click();
-
-  await expect(page.getByRole("heading", { name: /Patient Management/i })).toBeVisible();
+  await page.goto("/register");
+  await expect(page.getByRole("heading", { name: "Camp Registration" })).toBeVisible();
 
   const suffix = Date.now();
+  await page.getByLabel("Full Name").fill(`Playwright User ${suffix}`);
+  await page.getByLabel("Age").fill("25");
+  await page.getByLabel("Contact Number").fill(`+20 100 ${String(suffix).slice(-6)}`);
+  await page.getByLabel("Email (optional)").fill(`playwright.user.${suffix}@example.com`);
 
-  await page.getByLabel("Full Name").fill(`Playwright Patient ${suffix}`);
-  await page.getByLabel("Date of Birth").fill("1994-11-20");
-  await page.getByLabel("Gender").fill("Female");
-  await page.getByLabel("Phone").fill(`+20 100 ${String(suffix).slice(-6)}`);
-  await page.getByLabel("Address").fill("Cairo");
-  await page.getByLabel("Medical History").fill("Automated e2e patient");
+  await page.getByRole("button", { name: "Submit Registration" }).click();
 
-  await page.getByRole("button", { name: "Add Patient" }).click();
-
-  await expect(page.getByText(/Patient added successfully/i)).toBeVisible();
+  await expect(page.getByText(/confirmation code/i)).toBeVisible();
 });

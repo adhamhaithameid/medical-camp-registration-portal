@@ -11,10 +11,18 @@ export default defineConfig({
     baseURL: "http://localhost:5173",
     trace: "on-first-retry"
   },
-  webServer: {
-    command: "pnpm dev",
-    port: 5173,
-    timeout: 180_000,
-    reuseExistingServer: !process.env.CI
-  }
+  webServer: [
+    {
+      command: "pnpm db:deploy && pnpm db:seed && pnpm --filter server dev",
+      port: 4000,
+      timeout: 180_000,
+      reuseExistingServer: !process.env.CI
+    },
+    {
+      command: "pnpm --filter client dev",
+      port: 5173,
+      timeout: 180_000,
+      reuseExistingServer: !process.env.CI
+    }
+  ]
 });

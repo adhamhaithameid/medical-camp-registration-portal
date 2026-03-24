@@ -1,45 +1,25 @@
-import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { api } from "../lib/api";
+import type { AdminRole } from "@medical-camp/shared";
+import { useAuth } from "../context/AuthContext";
 
-export const ProtectedRoute = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+interface ProtectedRouteProps {
+  allowedRoles?: AdminRole[];
+}
+
+export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+  const { auth, isLoading } = useAuth();
   const location = useLocation();
-
-  useEffect(() => {
-    let ignore = false;
-
-    const checkAuth = async () => {
-      try {
-        const auth = await api.getAuthStatus();
-        if (!ignore) {
-          setIsAuthenticated(auth.authenticated);
-        }
-      } catch {
-        if (!ignore) {
-          setIsAuthenticated(false);
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    checkAuth();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
 
   if (isLoading) {
     return <p>Checking session...</p>;
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
+  if (!auth.authenticated) {
+    return <Navigate to="/admin/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (allowedRoles && auth.role && !allowedRoles.includes(auth.role)) {
+    return <Navigate to="/admin/registrations" replace />;
   }
 
   return <Outlet />;

@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AuthProvider } from "../context/AuthContext";
 import { AppRoutes } from "../App";
 
 const mockedFetch = vi.fn();
@@ -17,79 +18,87 @@ describe("AppRoutes", () => {
     mockedFetch.mockReset();
   });
 
-  it("renders home route", () => {
+  it("renders home route", async () => {
     mockedFetch.mockImplementation((url: string) => {
       if (url.includes("/api/auth/status")) {
         return mockJsonResponse({ auth: { authenticated: false } });
+      }
+
+      if (url.includes("/api/camps")) {
+        return mockJsonResponse({ camps: [] });
       }
 
       return mockJsonResponse({});
     });
 
     render(
-      <MemoryRouter initialEntries={["/"]}>
-        <AppRoutes />
-      </MemoryRouter>
+      <AuthProvider>
+        <MemoryRouter initialEntries={["/"]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </AuthProvider>
     );
 
     expect(
-      screen.getByRole("heading", { name: /Hospital Management System/i, level: 2 })
+      await screen.findByRole("heading", {
+        name: /Find A Medical Camp And Register In Minutes/i,
+        level: 2
+      })
     ).toBeInTheDocument();
   });
 
-  it("redirects unauthenticated user to auth page", async () => {
+  it("redirects unauthenticated admin user to admin login", async () => {
     mockedFetch.mockImplementation((url: string) => {
       if (url.includes("/api/auth/status")) {
         return mockJsonResponse({ auth: { authenticated: false } });
       }
 
-      return mockJsonResponse({});
+      return mockJsonResponse({ camps: [] });
     });
 
     render(
-      <MemoryRouter initialEntries={["/patients"]}>
-        <AppRoutes />
-      </MemoryRouter>
+      <AuthProvider>
+        <MemoryRouter initialEntries={["/admin/registrations"]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </AuthProvider>
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: /User Login/i })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Admin Login/i })).toBeInTheDocument();
     });
   });
 
-  it("shows patients route when authenticated", async () => {
+  it("shows admin registrations route when authenticated", async () => {
     mockedFetch.mockImplementation((url: string) => {
       if (url.includes("/api/auth/status")) {
         return mockJsonResponse({
           auth: {
             authenticated: true,
+            adminUsername: "admin",
+            role: "SUPER_ADMIN",
             user: {
               id: 1,
-              fullName: "System Admin",
-              email: "admin@hms.local",
-              role: "ADMIN"
+              username: "admin",
+              role: "SUPER_ADMIN"
             }
           }
         });
       }
 
-      if (url.includes("/api/patients")) {
+      if (url.includes("/api/admin/camps")) {
+        return mockJsonResponse({ camps: [] });
+      }
+
+      if (url.includes("/api/admin/registrations")) {
         return mockJsonResponse({
-          patients: [
-            {
-              id: 1,
-              fullName: "Nour Hassan",
-              dateOfBirth: "1992-09-20T00:00:00.000Z",
-              gender: "Female",
-              phone: "+20 101 111 2233",
-              address: "Nasr City",
-              medicalHistory: "Test",
-              isDeleted: false,
-              deletedAt: null,
-              createdAt: "2026-03-24T10:00:00.000Z",
-              updatedAt: "2026-03-24T10:00:00.000Z"
-            }
-          ]
+          registrations: [],
+          meta: {
+            total: 0,
+            page: 1,
+            pageSize: 10,
+            totalPages: 1
+          }
         });
       }
 
@@ -97,14 +106,15 @@ describe("AppRoutes", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/patients"]}>
-        <AppRoutes />
-      </MemoryRouter>
+      <AuthProvider>
+        <MemoryRouter initialEntries={["/admin/registrations"]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </AuthProvider>
     );
 
     expect(
-      await screen.findByRole("heading", { name: /Patient Management/i })
+      await screen.findByRole("heading", { name: /Admin Registrations/i })
     ).toBeInTheDocument();
-    expect(await screen.findByText(/Nour Hassan/i)).toBeInTheDocument();
   });
 });

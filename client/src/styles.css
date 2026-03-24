@@ -287,6 +287,49 @@ th {
   font-weight: 700;
 }
 
+.muted-text {
+  color: var(--text-soft);
+}
+
+.card-grid {
+  margin-top: 1.2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.camp-card {
+  border: 1px solid #d7e4ec;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(24, 40, 65, 0.08);
+}
+
+.camp-card h3 {
+  margin-top: 0;
+}
+
+.waitlist-tag {
+  color: #9a4e00;
+  font-weight: 700;
+}
+
+.success-box {
+  margin-top: 1rem;
+  border: 1px solid #c7ecd7;
+  border-radius: 10px;
+  background: #f1fff6;
+  padding: 0.8rem;
+}
+
+.pagination-row {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
 @media (max-width: 700px) {
   .app-shell {
     width: calc(100% - 1rem);
