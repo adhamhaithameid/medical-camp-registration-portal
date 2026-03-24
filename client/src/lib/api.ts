@@ -25,43 +25,161 @@ import type {
 
 const API_BASE_URL = "/api";
 
-const getErrorMessage = async (response: Response) => {
-  try {
-    const payload = await response.json();
-    return payload.message ?? "Request failed";
-  } catch {
-    return "Request failed";
+interface ApiErrorPayload {
+  message?: unknown;
+  details?: unknown;
+}
+
+class ApiError extends Error {
+  readonly status?: number;
+  readonly method: string;
+  readonly path: string;
+  readonly category: "http" | "network" | "unknown";
+
+  constructor(params: {
+    message: string;
+    method: string;
+    path: string;
+    status?: number;
+    category?: "http" | "network" | "unknown";
+  }) {
+    super(params.message);
+    this.name = "ApiError";
+    this.method = params.method;
+    this.path = params.path;
+    this.status = params.status;
+    this.category = params.category ?? "unknown";
   }
+}
+
+const toTitle = (value: string) =>
+  value
+    .replace(/[_-]/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const toDetails = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return [value.trim()];
+  }
+
+  return [];
+};
+
+const getStatusHint = (status: number) => {
+  switch (status) {
+    case 400:
+      return "Invalid request payload. Check the highlighted form fields.";
+    case 401:
+      return "Authentication failed or session expired. Login again and retry.";
+    case 403:
+      return "Your account does not have permission for this operation.";
+    case 404:
+      return "Requested resource was not found.";
+    case 409:
+      return "Operation conflicts with current data state (duplicate or rule violation).";
+    case 429:
+      return "Too many requests. Wait a moment before retrying.";
+    default:
+      if (status >= 500) {
+        return "Server-side error. Check backend logs and API health endpoint.";
+      }
+      return null;
+  }
+};
+
+const buildHttpError = async (response: Response, method: string, path: string) => {
+  let payload: ApiErrorPayload | null = null;
+
+  try {
+    payload = (await response.json()) as ApiErrorPayload;
+  } catch {
+    payload = null;
+  }
+
+  const baseMessage =
+    typeof payload?.message === "string" && payload.message.trim()
+      ? payload.message.trim()
+      : "Request failed";
+  const details = toDetails(payload?.details);
+  const hint = getStatusHint(response.status);
+  const context = `${method.toUpperCase()} ${API_BASE_URL}${path}`;
+  const statusLabel = `${response.status} ${toTitle(response.statusText || "Error")}`;
+  const detailSuffix = details.length > 0 ? ` Details: ${details.join(" | ")}.` : "";
+  const hintSuffix = hint ? ` Hint: ${hint}` : "";
+
+  return new ApiError({
+    message: `${baseMessage} (${statusLabel}, ${context}).${detailSuffix}${hintSuffix}`,
+    method,
+    path,
+    status: response.status,
+    category: "http"
+  });
+};
+
+const buildNetworkError = (error: unknown, method: string, path: string) => {
+  const context = `${method.toUpperCase()} ${API_BASE_URL}${path}`;
+  const rawMessage =
+    error instanceof Error && error.message.trim() ? error.message.trim() : "Network failure";
+  const hint =
+    "Verify backend is running on http://localhost:4000, frontend on http://localhost:5173, and CORS_ORIGIN includes your host.";
+
+  return new ApiError({
+    message: `${rawMessage} (${context}). Hint: ${hint}`,
+    method,
+    path,
+    category: "network"
+  });
 };
 
 const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
   const headers = new Headers(init.headers ?? {});
+  const method = String(init.method ?? "GET").toUpperCase();
 
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers,
-    credentials: "include"
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers,
+      credentials: "include"
+    });
+  } catch (error) {
+    throw buildNetworkError(error, method, path);
+  }
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
+    throw await buildHttpError(response, method, path);
   }
 
   return (await response.json()) as T;
 };
 
 const requestText = async (path: string, init: RequestInit = {}): Promise<string> => {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: "include"
-  });
+  const method = String(init.method ?? "GET").toUpperCase();
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      credentials: "include"
+    });
+  } catch (error) {
+    throw buildNetworkError(error, method, path);
+  }
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
+    throw await buildHttpError(response, method, path);
   }
 
   return response.text();
