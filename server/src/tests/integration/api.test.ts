@@ -193,4 +193,106 @@ describe("Medical Camp API integration", () => {
     const logoutResponse = await agent.post("/api/auth/logout");
     expect(logoutResponse.status).toBe(200);
   });
+
+  it("supports full CRUD for patients, doctors, and admins", async () => {
+    const agent = request.agent(app);
+
+    const loginResponse = await agent.post("/api/auth/login").send({
+      username: process.env.DEFAULT_SUPER_ADMIN_USERNAME,
+      password: process.env.DEFAULT_SUPER_ADMIN_PASSWORD
+    });
+
+    expect(loginResponse.status).toBe(200);
+
+    const createPatient = await agent.post("/api/admin/patients").send({
+      fullName: "Integration Patient",
+      dateOfBirth: "1994-07-18",
+      gender: "Female",
+      contactNumber: "+20 101 454 5454",
+      email: "integration.patient@example.com",
+      address: "Cairo",
+      medicalHistory: "Allergy"
+    });
+    expect(createPatient.status).toBe(201);
+    const patientId = createPatient.body.patient.id as number;
+
+    const listPatients = await agent.get("/api/admin/patients?search=Integration");
+    expect(listPatients.status).toBe(200);
+    expect(listPatients.body.patients.some((item: { id: number }) => item.id === patientId)).toBe(
+      true
+    );
+
+    const getPatient = await agent.get(`/api/admin/patients/${patientId}`);
+    expect(getPatient.status).toBe(200);
+
+    const updatePatient = await agent.patch(`/api/admin/patients/${patientId}`).send({
+      address: "Giza City"
+    });
+    expect(updatePatient.status).toBe(200);
+    expect(updatePatient.body.patient.address).toBe("Giza City");
+
+    const deletePatient = await agent.delete(`/api/admin/patients/${patientId}`);
+    expect(deletePatient.status).toBe(200);
+
+    const getDeletedPatient = await agent.get(`/api/admin/patients/${patientId}`);
+    expect(getDeletedPatient.status).toBe(404);
+
+    const createDoctor = await agent.post("/api/admin/doctors").send({
+      fullName: "Dr. Integration",
+      email: "dr.integration@example.com",
+      contactNumber: "+20 100 123 0000",
+      specialization: "Dermatology",
+      department: "Outpatient"
+    });
+    expect(createDoctor.status).toBe(201);
+    const doctorId = createDoctor.body.doctor.id as number;
+
+    const listDoctors = await agent.get("/api/admin/doctors?search=Integration");
+    expect(listDoctors.status).toBe(200);
+    expect(listDoctors.body.doctors.some((item: { id: number }) => item.id === doctorId)).toBe(
+      true
+    );
+
+    const getDoctor = await agent.get(`/api/admin/doctors/${doctorId}`);
+    expect(getDoctor.status).toBe(200);
+
+    const updateDoctor = await agent.patch(`/api/admin/doctors/${doctorId}`).send({
+      specialization: "Internal Medicine"
+    });
+    expect(updateDoctor.status).toBe(200);
+    expect(updateDoctor.body.doctor.specialization).toBe("Internal Medicine");
+
+    const deleteDoctor = await agent.delete(`/api/admin/doctors/${doctorId}`);
+    expect(deleteDoctor.status).toBe(200);
+
+    const getDeletedDoctor = await agent.get(`/api/admin/doctors/${doctorId}`);
+    expect(getDeletedDoctor.status).toBe(404);
+
+    const createAdmin = await agent.post("/api/admin/users").send({
+      username: "integration.staff",
+      password: "staff12345",
+      role: "STAFF"
+    });
+    expect(createAdmin.status).toBe(201);
+    const adminId = createAdmin.body.user.id as number;
+
+    const listAdmins = await agent.get("/api/admin/users");
+    expect(listAdmins.status).toBe(200);
+    expect(listAdmins.body.users.some((item: { id: number }) => item.id === adminId)).toBe(true);
+
+    const getAdmin = await agent.get(`/api/admin/users/${adminId}`);
+    expect(getAdmin.status).toBe(200);
+
+    const updateAdmin = await agent.patch(`/api/admin/users/${adminId}`).send({
+      isActive: false
+    });
+    expect(updateAdmin.status).toBe(200);
+    expect(updateAdmin.body.user.isActive).toBe(false);
+
+    const deleteAdmin = await agent.delete(`/api/admin/users/${adminId}`);
+    expect(deleteAdmin.status).toBe(200);
+
+    const getDeletedAdmin = await agent.get(`/api/admin/users/${adminId}`);
+    expect(getDeletedAdmin.status).toBe(404);
+  });
 });

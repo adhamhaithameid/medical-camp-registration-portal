@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { campInputSchema } from "../../validation/camp";
+import { doctorInputSchema } from "../../validation/doctor";
 import { loginInputSchema } from "../../validation/auth";
+import { patientInputSchema } from "../../validation/patient";
 import { registrationInputSchema, registrationUpdateSchema } from "../../validation/registration";
 
 describe("campInputSchema", () => {
@@ -67,6 +69,36 @@ describe("loginInputSchema", () => {
     const parsed = loginInputSchema.safeParse({
       username: "admin",
       password: "admin12345"
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+});
+
+describe("patientInputSchema", () => {
+  it("accepts valid patient payload", () => {
+    const parsed = patientInputSchema.safeParse({
+      fullName: "Ahmed Salah",
+      dateOfBirth: "1990-03-03",
+      gender: "Male",
+      contactNumber: "+20 101 333 4455",
+      email: "ahmed@example.com",
+      address: "Cairo",
+      medicalHistory: "None"
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+});
+
+describe("doctorInputSchema", () => {
+  it("accepts valid doctor payload", () => {
+    const parsed = doctorInputSchema.safeParse({
+      fullName: "Dr. Sami",
+      email: "sami@example.com",
+      contactNumber: "+20 101 777 8899",
+      specialization: "Orthopedics",
+      department: "Surgery"
     });
 
     expect(parsed.success).toBe(true);

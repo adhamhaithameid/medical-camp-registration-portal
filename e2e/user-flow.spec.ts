@@ -2,9 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("user can browse camps and submit registration", async ({ page }) => {
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: /Find A Medical Camp And Register In Minutes/i })
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Complete Hospital Management System/i })).toBeVisible();
 
   await page.goto("/register");
   await expect(page.getByRole("heading", { name: "Camp Registration" })).toBeVisible();

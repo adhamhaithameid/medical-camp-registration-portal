@@ -41,7 +41,7 @@ describe("AppRoutes", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: /Find A Medical Camp And Register In Minutes/i,
+        name: /Complete Hospital Management System/i,
         level: 2
       })
     ).toBeInTheDocument();
