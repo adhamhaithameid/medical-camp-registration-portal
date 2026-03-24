@@ -15,7 +15,7 @@ services:
       DEFAULT_SUPER_ADMIN_PASSWORD: admin12345
       DEFAULT_STAFF_USERNAME: staff
       DEFAULT_STAFF_PASSWORD: staff12345
-      CORS_ORIGIN: http://localhost:4000
+      CORS_ORIGIN: http://localhost:4000,http://127.0.0.1:4000
     volumes:
       - medical-camp-db:/app/server/prisma/data
 

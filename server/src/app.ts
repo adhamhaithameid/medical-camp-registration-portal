@@ -16,12 +16,22 @@ export const createApp = () => {
   const env = getEnv();
   const app = express();
 
-  const allowedOrigins = env.CORS_ORIGIN.split(",").map((origin) => origin.trim());
+  const normalizeLoopbackOrigin = (origin: string) =>
+    origin.replace("://127.0.0.1", "://localhost").trim();
+
+  const allowedOrigins = env.CORS_ORIGIN.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const allowedOriginSet = new Set(allowedOrigins.map(normalizeLoopbackOrigin));
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin) {
+          return callback(null, true);
+        }
+
+        if (allowedOriginSet.has(normalizeLoopbackOrigin(origin))) {
           return callback(null, true);
         }
 

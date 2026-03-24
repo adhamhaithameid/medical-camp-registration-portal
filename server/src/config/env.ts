@@ -10,7 +10,11 @@ const envSchema = z.object({
     .default("4000")
     .transform((value) => Number(value)),
   DATABASE_URL: z.string().default("file:./dev.db"),
-  CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  CORS_ORIGIN: z
+    .string()
+    .default(
+      "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4000,http://127.0.0.1:4000"
+    ),
   JWT_SECRET: z.string().min(10).default("replace-this-secret"),
   JWT_EXPIRES_IN: z.string().default("8h"),
   DEFAULT_SUPER_ADMIN_USERNAME: z.string().default("admin"),
