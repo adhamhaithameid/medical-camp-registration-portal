@@ -62,6 +62,24 @@ export const HomePage = () => {
         </div>
       </section>
 
+      <section className="quick-link-grid" aria-label="Patient shortcuts">
+        <Link className="quick-link-card" to="/register">
+          <p className="kpi-label">Quick Action</p>
+          <h3>Register For Camp</h3>
+          <p className="muted-text">Submit your camp registration in less than a minute.</p>
+        </Link>
+        <Link className="quick-link-card" to="/registration/manage">
+          <p className="kpi-label">Self Service</p>
+          <h3>Manage Registration</h3>
+          <p className="muted-text">Update details or cancel using your confirmation code.</p>
+        </Link>
+        <Link className="quick-link-card" to="/contact">
+          <p className="kpi-label">Need Help</p>
+          <h3>Contact Support</h3>
+          <p className="muted-text">Reach the operations desk for urgent camp support.</p>
+        </Link>
+      </section>
+
       <ErrorCallout error={error} onRetry={() => api.getCamps().then((response) => setCamps(response.camps))} />
 
       <section className="kpi-grid" aria-label="Operations overview">
@@ -79,6 +97,11 @@ export const HomePage = () => {
         </article>
       </section>
 
+      <div className="section-title-row">
+        <h3>Available Camps</h3>
+        <p className="muted-text">Browse schedules, capacity, and registration status.</p>
+      </div>
+
       {isLoading ? (
         <p>Loading camps...</p>
       ) : (
@@ -86,8 +109,8 @@ export const HomePage = () => {
           {camps.map((camp) => (
             <article key={camp.id} className="camp-card">
               <h3>{camp.name}</h3>
-              <p>{new Date(camp.date).toLocaleString()}</p>
-              <p>{camp.location}</p>
+              <p className="camp-meta">{new Date(camp.date).toLocaleString()}</p>
+              <p className="camp-meta">{camp.location}</p>
               <p className="muted-text">{camp.description}</p>
               <p>
                 Seats Left: <strong>{camp.remainingSeats}</strong> / {camp.capacity}
