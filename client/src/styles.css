@@ -227,9 +227,12 @@ p {
   text-transform: uppercase;
 }
 
-.workspace-topbar h2 {
+.workspace-title {
   margin-top: 0.16rem;
+  font-family: "Manrope", sans-serif;
   font-size: 1.32rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 
 .topbar-actions,

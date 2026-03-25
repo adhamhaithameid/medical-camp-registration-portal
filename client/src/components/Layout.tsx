@@ -144,7 +144,7 @@ export const Layout = () => {
             <p className="workspace-breadcrumb">
               {auth.authenticated ? "Hospital Operations Workspace" : "Patient Self-Service Portal"}
             </p>
-            <h2>{getWorkspaceTitle(location.pathname)}</h2>
+            <p className="workspace-title">{getWorkspaceTitle(location.pathname)}</p>
           </div>
 
           <div className="topbar-actions">
