@@ -143,16 +143,17 @@ export const RegistrationPage = () => {
 
   return (
     <section className="workspace-page form-panel">
-      <h2>Camp Registration</h2>
-      <p className="muted-text">
-        When a camp reaches capacity, new registrations are automatically waitlisted.
-      </p>
-
-      {selectedCamp && (
+      <section className="detail-panel">
+        <h2>Camp Registration</h2>
         <p className="muted-text">
-          {selectedCamp.name} has {selectedCamp.remainingSeats} seats remaining.
+          When a camp reaches capacity, new registrations are automatically waitlisted.
         </p>
-      )}
+        {selectedCamp && (
+          <p className="muted-text">
+            {selectedCamp.name} has {selectedCamp.remainingSeats} seats remaining.
+          </p>
+        )}
+      </section>
 
       {!isOnline && (
         <p className="warning-text">You are offline. Form submission is disabled until reconnect.</p>
@@ -179,80 +180,109 @@ export const RegistrationPage = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="form-grid" noValidate>
-        <label htmlFor="registrationCamp">
-          Camp
-          <select
-            id="registrationCamp"
-            value={form.campId}
-            onChange={(event) =>
-              setForm((previous) => ({
-                ...previous,
-                campId: Number(event.target.value)
-              }))
-            }
-          >
-            {camps.map((camp) => (
-              <option key={camp.id} value={camp.id}>
-                {camp.name} ({camp.remainingSeats} seats left)
-              </option>
-            ))}
-          </select>
-          <FieldErrorText message={getFieldError(error, "campId")} />
-        </label>
+      <section className="split-layout">
+        <section className="detail-panel sticky-panel">
+          <h3>Selected Camp Snapshot</h3>
+          {selectedCamp ? (
+            <>
+              <p>
+                <strong>Camp:</strong> {selectedCamp.name}
+              </p>
+              <p>
+                <strong>Date:</strong> {new Date(selectedCamp.date).toLocaleString()}
+              </p>
+              <p>
+                <strong>Location:</strong> {selectedCamp.location}
+              </p>
+              <p>
+                <strong>Remaining Seats:</strong> {selectedCamp.remainingSeats} /{" "}
+                {selectedCamp.capacity}
+              </p>
+            </>
+          ) : (
+            <p className="muted-text">Select a camp to view details.</p>
+          )}
+        </section>
 
-        <label htmlFor="registrationName">
-          Full Name
-          <input
-            id="registrationName"
-            value={form.fullName}
-            onChange={(event) =>
-              setForm((previous) => ({ ...previous, fullName: event.target.value }))
-            }
-          />
-          <FieldErrorText message={getFieldError(error, "fullName")} />
-        </label>
+        <form onSubmit={handleSubmit} className="form-grid" noValidate>
+          <label htmlFor="registrationCamp">
+            Camp
+            <select
+              id="registrationCamp"
+              value={form.campId}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  campId: Number(event.target.value)
+                }))
+              }
+            >
+              {camps.map((camp) => (
+                <option key={camp.id} value={camp.id}>
+                  {camp.name} ({camp.remainingSeats} seats left)
+                </option>
+              ))}
+            </select>
+            <FieldErrorText message={getFieldError(error, "campId")} />
+          </label>
 
-        <label htmlFor="registrationAge">
-          Age
-          <input
-            id="registrationAge"
-            type="number"
-            min={1}
-            max={120}
-            value={form.age}
-            onChange={(event) => setForm((previous) => ({ ...previous, age: Number(event.target.value) }))}
-          />
-          <FieldErrorText message={getFieldError(error, "age")} />
-        </label>
+          <label htmlFor="registrationName">
+            Full Name
+            <input
+              id="registrationName"
+              value={form.fullName}
+              onChange={(event) =>
+                setForm((previous) => ({ ...previous, fullName: event.target.value }))
+              }
+            />
+            <FieldErrorText message={getFieldError(error, "fullName")} />
+          </label>
 
-        <label htmlFor="registrationContact">
-          Contact Number
-          <input
-            id="registrationContact"
-            value={form.contactNumber}
-            onChange={(event) =>
-              setForm((previous) => ({ ...previous, contactNumber: event.target.value }))
-            }
-          />
-          <FieldErrorText message={getFieldError(error, "contactNumber")} />
-        </label>
+          <label htmlFor="registrationAge">
+            Age
+            <input
+              id="registrationAge"
+              type="number"
+              min={1}
+              max={120}
+              value={form.age}
+              onChange={(event) =>
+                setForm((previous) => ({ ...previous, age: Number(event.target.value) }))
+              }
+            />
+            <FieldErrorText message={getFieldError(error, "age")} />
+          </label>
 
-        <label htmlFor="registrationEmail">
-          Email (optional)
-          <input
-            id="registrationEmail"
-            type="email"
-            value={form.email ?? ""}
-            onChange={(event) => setForm((previous) => ({ ...previous, email: event.target.value }))}
-          />
-          <FieldErrorText message={getFieldError(error, "email")} />
-        </label>
+          <label htmlFor="registrationContact">
+            Contact Number
+            <input
+              id="registrationContact"
+              value={form.contactNumber}
+              onChange={(event) =>
+                setForm((previous) => ({ ...previous, contactNumber: event.target.value }))
+              }
+            />
+            <FieldErrorText message={getFieldError(error, "contactNumber")} />
+          </label>
 
-        <button className="btn btn-primary" type="submit" disabled={isSubmitting || !isOnline}>
-          {isSubmitting ? "Submitting..." : "Submit Registration"}
-        </button>
-      </form>
+          <label htmlFor="registrationEmail">
+            Email (optional)
+            <input
+              id="registrationEmail"
+              type="email"
+              value={form.email ?? ""}
+              onChange={(event) =>
+                setForm((previous) => ({ ...previous, email: event.target.value }))
+              }
+            />
+            <FieldErrorText message={getFieldError(error, "email")} />
+          </label>
+
+          <button className="btn btn-primary" type="submit" disabled={isSubmitting || !isOnline}>
+            {isSubmitting ? "Submitting..." : "Submit Registration"}
+          </button>
+        </form>
+      </section>
     </section>
   );
 };

@@ -148,41 +148,45 @@ export const PatientsPage = () => {
 
   return (
     <section className="workspace-page">
-      <h2>Patients Management</h2>
-      <p className="muted-text">
-        Maintain complete patient records with fast search and structured updates.
-      </p>
+      <section className="detail-panel">
+        <h2>Patients Management</h2>
+        <p className="muted-text">
+          Maintain complete patient records with fast search and structured updates.
+        </p>
+      </section>
 
       {!isOnline && (
         <p className="warning-text">You are offline. Create/update/delete actions are disabled.</p>
       )}
       <ErrorCallout error={error} onRetry={() => load(search || undefined)} />
 
-      <div className="toolbar">
-        <input
-          aria-label="Search Patients"
-          placeholder="Search by name/contact/email"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <button
-          className="btn btn-ghost"
-          type="button"
-          onClick={() => {
-            setSearch("");
-            void load();
-          }}
-        >
-          Clear
-        </button>
-        <button className="btn btn-secondary" type="button" onClick={handleSearch} disabled={!isOnline}>
-          Search
-        </button>
-      </div>
+      <section className="detail-panel">
+        <div className="toolbar">
+          <input
+            aria-label="Search Patients"
+            placeholder="Search by name/contact/email"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <button
+            className="btn btn-ghost"
+            type="button"
+            onClick={() => {
+              setSearch("");
+              void load();
+            }}
+          >
+            Clear
+          </button>
+          <button className="btn btn-secondary" type="button" onClick={handleSearch} disabled={!isOnline}>
+            Search
+          </button>
+        </div>
 
-      <p className="muted-text">Total patients: {patients.length}</p>
+        <p className="muted-text">Total patients: {patients.length}</p>
+      </section>
 
-      <form className="form-grid" onSubmit={handleSubmit} noValidate>
+      <form className="form-grid detail-panel" onSubmit={handleSubmit} noValidate>
         <label htmlFor="patientName">
           Full Name
           <input
@@ -270,51 +274,53 @@ export const PatientsPage = () => {
       {isLoading ? (
         <p>Loading patients...</p>
       ) : (
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Contact</th>
-                <th>Email</th>
-                <th>DOB</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {patients.map((patient) => (
-                <tr key={patient.id}>
-                  <td>{patient.id}</td>
-                  <td>{patient.fullName}</td>
-                  <td>{patient.contactNumber}</td>
-                  <td>{patient.email ?? "-"}</td>
-                  <td>{new Date(patient.dateOfBirth).toLocaleDateString()}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="btn btn-secondary" type="button" onClick={() => startEdit(patient)}>
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-secondary"
-                        type="button"
-                        onClick={() => handleDelete(patient.id)}
-                        disabled={!isOnline}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {patients.length === 0 && (
+        <section className="detail-panel">
+          <div className="table-wrapper">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={6}>No patients found.</td>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Email</th>
+                  <th>DOB</th>
+                  <th>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {patients.map((patient) => (
+                  <tr key={patient.id}>
+                    <td>{patient.id}</td>
+                    <td>{patient.fullName}</td>
+                    <td>{patient.contactNumber}</td>
+                    <td>{patient.email ?? "-"}</td>
+                    <td>{new Date(patient.dateOfBirth).toLocaleDateString()}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="btn btn-secondary" type="button" onClick={() => startEdit(patient)}>
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          type="button"
+                          onClick={() => handleDelete(patient.id)}
+                          disabled={!isOnline}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {patients.length === 0 && (
+                  <tr>
+                    <td colSpan={6}>No patients found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
     </section>
   );

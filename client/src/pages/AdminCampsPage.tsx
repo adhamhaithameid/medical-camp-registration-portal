@@ -146,17 +146,21 @@ export const AdminCampsPage = () => {
 
   return (
     <section className="workspace-page">
-      <h2>Admin Camp Management</h2>
-      <p className="muted-text">
-        Create, edit, and deactivate camps with live capacity visibility.
-      </p>
+      <section className="detail-panel">
+        <h2>Admin Camp Management</h2>
+        <p className="muted-text">
+          Create, edit, and deactivate camps with live capacity visibility.
+        </p>
+      </section>
 
       {!isOnline && <p className="warning-text">You are offline. Camp writes are disabled.</p>}
       <ErrorCallout error={error} onRetry={load} />
 
-      <p className="muted-text">Total camps: {camps.length}</p>
+      <section className="detail-panel">
+        <p className="muted-text">Total camps: {camps.length}</p>
+      </section>
 
-      <form className="form-grid" onSubmit={handleSubmit} noValidate>
+      <form className="form-grid detail-panel" onSubmit={handleSubmit} noValidate>
         <label htmlFor="campName">
           Camp Name
           <input
@@ -238,57 +242,59 @@ export const AdminCampsPage = () => {
       {isLoading ? (
         <p>Loading camps...</p>
       ) : (
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Date</th>
-                <th>Location</th>
-                <th>Capacity</th>
-                <th>Confirmed</th>
-                <th>Waitlist</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {camps.map((camp) => (
-                <tr key={camp.id}>
-                  <td>{camp.name}</td>
-                  <td>{new Date(camp.date).toLocaleString()}</td>
-                  <td>{camp.location}</td>
-                  <td>{camp.capacity}</td>
-                  <td>{camp.confirmedCount}</td>
-                  <td>{camp.waitlistCount}</td>
-                  <td>{camp.isActive ? "Active" : "Inactive"}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="btn btn-secondary" type="button" onClick={() => startEdit(camp)}>
-                        Edit
-                      </button>
-                      {camp.isActive && (
-                        <button
-                          className="btn btn-secondary"
-                          type="button"
-                          onClick={() => deactivate(camp.id)}
-                          disabled={!isOnline}
-                        >
-                          Deactivate
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {camps.length === 0 && (
+        <section className="detail-panel">
+          <div className="table-wrapper">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={8}>No camps found.</td>
+                  <th>Name</th>
+                  <th>Date</th>
+                  <th>Location</th>
+                  <th>Capacity</th>
+                  <th>Confirmed</th>
+                  <th>Waitlist</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {camps.map((camp) => (
+                  <tr key={camp.id}>
+                    <td>{camp.name}</td>
+                    <td>{new Date(camp.date).toLocaleString()}</td>
+                    <td>{camp.location}</td>
+                    <td>{camp.capacity}</td>
+                    <td>{camp.confirmedCount}</td>
+                    <td>{camp.waitlistCount}</td>
+                    <td>{camp.isActive ? "Active" : "Inactive"}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="btn btn-secondary" type="button" onClick={() => startEdit(camp)}>
+                          Edit
+                        </button>
+                        {camp.isActive && (
+                          <button
+                            className="btn btn-secondary"
+                            type="button"
+                            onClick={() => deactivate(camp.id)}
+                            disabled={!isOnline}
+                          >
+                            Deactivate
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {camps.length === 0 && (
+                  <tr>
+                    <td colSpan={8}>No camps found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
     </section>
   );

@@ -144,41 +144,45 @@ export const DoctorsPage = () => {
 
   return (
     <section className="workspace-page">
-      <h2>Doctors Management</h2>
-      <p className="muted-text">
-        Manage doctor master data, specialization details, and active status.
-      </p>
+      <section className="detail-panel">
+        <h2>Doctors Management</h2>
+        <p className="muted-text">
+          Manage doctor master data, specialization details, and active status.
+        </p>
+      </section>
 
       {!isOnline && (
         <p className="warning-text">You are offline. Create/update/delete actions are disabled.</p>
       )}
       <ErrorCallout error={error} onRetry={() => load(search || undefined)} />
 
-      <div className="toolbar">
-        <input
-          aria-label="Search Doctors"
-          placeholder="Search by name/email/specialization"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <button
-          className="btn btn-ghost"
-          type="button"
-          onClick={() => {
-            setSearch("");
-            void load();
-          }}
-        >
-          Clear
-        </button>
-        <button className="btn btn-secondary" type="button" onClick={handleSearch} disabled={!isOnline}>
-          Search
-        </button>
-      </div>
+      <section className="detail-panel">
+        <div className="toolbar">
+          <input
+            aria-label="Search Doctors"
+            placeholder="Search by name/email/specialization"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <button
+            className="btn btn-ghost"
+            type="button"
+            onClick={() => {
+              setSearch("");
+              void load();
+            }}
+          >
+            Clear
+          </button>
+          <button className="btn btn-secondary" type="button" onClick={handleSearch} disabled={!isOnline}>
+            Search
+          </button>
+        </div>
 
-      <p className="muted-text">Total doctors: {doctors.length}</p>
+        <p className="muted-text">Total doctors: {doctors.length}</p>
+      </section>
 
-      <form className="form-grid" onSubmit={handleSubmit} noValidate>
+      <form className="form-grid detail-panel" onSubmit={handleSubmit} noValidate>
         <label htmlFor="doctorName">
           Full Name
           <input
@@ -258,53 +262,55 @@ export const DoctorsPage = () => {
       {isLoading ? (
         <p>Loading doctors...</p>
       ) : (
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Contact</th>
-                <th>Specialization</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {doctors.map((doctor) => (
-                <tr key={doctor.id}>
-                  <td>{doctor.id}</td>
-                  <td>{doctor.fullName}</td>
-                  <td>{doctor.email}</td>
-                  <td>{doctor.contactNumber}</td>
-                  <td>{doctor.specialization}</td>
-                  <td>{doctor.isActive ? "Active" : "Inactive"}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="btn btn-secondary" type="button" onClick={() => startEdit(doctor)}>
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-secondary"
-                        type="button"
-                        onClick={() => handleDelete(doctor.id)}
-                        disabled={!isOnline}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {doctors.length === 0 && (
+        <section className="detail-panel">
+          <div className="table-wrapper">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={7}>No doctors found.</td>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Contact</th>
+                  <th>Specialization</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {doctors.map((doctor) => (
+                  <tr key={doctor.id}>
+                    <td>{doctor.id}</td>
+                    <td>{doctor.fullName}</td>
+                    <td>{doctor.email}</td>
+                    <td>{doctor.contactNumber}</td>
+                    <td>{doctor.specialization}</td>
+                    <td>{doctor.isActive ? "Active" : "Inactive"}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="btn btn-secondary" type="button" onClick={() => startEdit(doctor)}>
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          type="button"
+                          onClick={() => handleDelete(doctor.id)}
+                          disabled={!isOnline}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {doctors.length === 0 && (
+                  <tr>
+                    <td colSpan={7}>No doctors found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
     </section>
   );

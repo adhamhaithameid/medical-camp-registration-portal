@@ -53,11 +53,13 @@ export const AdminLoginPage = () => {
 
   return (
     <section className="workspace-page form-panel">
-      <h2>Admin Login</h2>
-      <p className="muted-text">
-        Default users: <strong>admin / admin12345</strong> (super admin),{" "}
-        <strong>staff / staff12345</strong> (staff)
-      </p>
+      <section className="detail-panel">
+        <h2>Admin Login</h2>
+        <p className="muted-text">
+          Default users: <strong>admin / admin12345</strong> (super admin),{" "}
+          <strong>staff / staff12345</strong> (staff)
+        </p>
+      </section>
 
       {!isOnline && <p className="warning-text">Offline mode detected. Login requires network access.</p>}
       <ErrorCallout error={error} />

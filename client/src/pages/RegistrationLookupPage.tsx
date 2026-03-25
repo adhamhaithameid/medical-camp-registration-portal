@@ -105,32 +105,36 @@ export const RegistrationLookupPage = () => {
 
   return (
     <section className="workspace-page">
-      <h2>Manage Registration</h2>
-      <p className="muted-text">
-        Use your confirmation code to view, edit, or cancel your registration.
-      </p>
+      <section className="detail-panel">
+        <h2>Manage Registration</h2>
+        <p className="muted-text">
+          Use your confirmation code to view, edit, or cancel your registration.
+        </p>
+      </section>
 
       {!isOnline && (
         <p className="warning-text">You are offline. Lookup/update/cancel actions are disabled.</p>
       )}
       <ErrorCallout error={error} onRetry={handleLookup} />
 
-      <div className="toolbar">
-        <input
-          aria-label="Confirmation Code"
-          placeholder="Enter confirmation code"
-          value={confirmationCode}
-          onChange={(event) => setConfirmationCode(event.target.value)}
-        />
-        <button
-          className="btn btn-primary"
-          type="button"
-          onClick={handleLookup}
-          disabled={isLoading || !isOnline}
-        >
-          {isLoading ? "Loading..." : "Lookup"}
-        </button>
-      </div>
+      <section className="detail-panel">
+        <div className="toolbar">
+          <input
+            aria-label="Confirmation Code"
+            placeholder="Enter confirmation code"
+            value={confirmationCode}
+            onChange={(event) => setConfirmationCode(event.target.value)}
+          />
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={handleLookup}
+            disabled={isLoading || !isOnline}
+          >
+            {isLoading ? "Loading..." : "Lookup"}
+          </button>
+        </div>
+      </section>
       <FieldErrorText message={getFieldError(error, "confirmationCode")} />
 
       {lookupResult && (

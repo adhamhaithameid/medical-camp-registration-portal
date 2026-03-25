@@ -60,24 +60,28 @@ export const AdminDiagnosticsPage = () => {
 
   return (
     <section className="workspace-page">
-      <h2>Admin Diagnostics</h2>
-      <p className="muted-text">
-        Investigate recent failures, audit activity, notification queue, and export a full error
-        report for support.
-      </p>
+      <section className="detail-panel">
+        <h2>Admin Diagnostics</h2>
+        <p className="muted-text">
+          Investigate recent failures, audit activity, notification queue, and export a full error
+          report for support.
+        </p>
+      </section>
 
       {!isOnline && (
         <p className="warning-text">You are offline. Diagnostics data may be stale until reconnect.</p>
       )}
 
-      <div className="inline-actions">
-        <button className="btn btn-secondary" type="button" onClick={() => void load()} disabled={!isOnline}>
-          Refresh Diagnostics
-        </button>
-        <button className="btn btn-primary" type="button" onClick={handleExport} disabled={isExporting || !isOnline}>
-          {isExporting ? "Exporting..." : "Export Error Report"}
-        </button>
-      </div>
+      <section className="detail-panel">
+        <div className="inline-actions">
+          <button className="btn btn-secondary" type="button" onClick={() => void load()} disabled={!isOnline}>
+            Refresh Diagnostics
+          </button>
+          <button className="btn btn-primary" type="button" onClick={handleExport} disabled={isExporting || !isOnline}>
+            {isExporting ? "Exporting..." : "Export Error Report"}
+          </button>
+        </div>
+      </section>
 
       <ErrorCallout error={error} onRetry={load} />
 
