@@ -10,7 +10,7 @@ COPY shared/package.json ./shared/
 RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN pnpm build
+RUN pnpm db:generate && pnpm build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -30,6 +30,7 @@ COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/server/prisma ./server/prisma
 COPY --from=builder /app/client/dist ./client/dist
 COPY --from=builder /app/shared/dist ./shared/dist
+RUN pnpm --filter server db:generate
 
 EXPOSE 4000
 
