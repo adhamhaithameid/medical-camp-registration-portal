@@ -49,20 +49,24 @@ export const SystemStatusPage = () => {
 
   return (
     <section className="workspace-page">
-      <h2>System Status</h2>
-      <p className="muted-text">
-        Live service health, DB connectivity, session status, and runtime diagnostics counters.
-      </p>
+      <section className="detail-panel">
+        <h2>System Status</h2>
+        <p className="muted-text">
+          Live service health, DB connectivity, session status, and runtime diagnostics counters.
+        </p>
+      </section>
 
       {!isOnline && (
         <p className="warning-text">You are offline. Live status checks are temporarily unavailable.</p>
       )}
 
-      <div className="inline-actions">
-        <button className="btn btn-secondary" type="button" onClick={handleRefresh} disabled={!isOnline}>
-          Refresh Status
-        </button>
-      </div>
+      <section className="detail-panel">
+        <div className="inline-actions">
+          <button className="btn btn-secondary" type="button" onClick={handleRefresh} disabled={!isOnline}>
+            Refresh Status
+          </button>
+        </div>
+      </section>
 
       <ErrorCallout
         error={error}
