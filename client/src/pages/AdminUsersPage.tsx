@@ -135,15 +135,17 @@ export const AdminUsersPage = () => {
 
   return (
     <section className="workspace-page">
-      <h2>Admins Management</h2>
-      <p className="muted-text">Corporate access control for admin accounts (super admin only).</p>
+      <section className="detail-panel">
+        <h2>Admins Management</h2>
+        <p className="muted-text">Corporate access control for admin accounts (super admin only).</p>
+      </section>
 
       {!isOnline && (
         <p className="warning-text">You are offline. Admin role/status actions are disabled.</p>
       )}
       <ErrorCallout error={error} onRetry={load} />
 
-      <form className="form-grid" onSubmit={handleCreate} noValidate>
+      <form className="form-grid detail-panel" onSubmit={handleCreate} noValidate>
         <label htmlFor="adminUsername">
           Username
           <input
@@ -186,86 +188,90 @@ export const AdminUsersPage = () => {
         </button>
       </form>
 
-      <div className="toolbar">
-        <input
-          aria-label="Search Admins"
-          placeholder="Search by username or role"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <button className="btn btn-ghost" type="button" onClick={() => setSearch("")}>
-          Clear
-        </button>
-      </div>
+      <section className="detail-panel">
+        <div className="toolbar">
+          <input
+            aria-label="Search Admins"
+            placeholder="Search by username or role"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <button className="btn btn-ghost" type="button" onClick={() => setSearch("")}>
+            Clear
+          </button>
+        </div>
 
-      <p className="muted-text">Total admins: {filteredUsers.length}</p>
+        <p className="muted-text">Total admins: {filteredUsers.length}</p>
+      </section>
 
       {isLoading ? (
         <p>Loading admins...</p>
       ) : (
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.id}</td>
-                  <td>{user.username}</td>
-                  <td>{user.role}</td>
-                  <td>{user.isActive ? "Active" : "Inactive"}</td>
-                  <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button
-                        className="btn btn-secondary"
-                        type="button"
-                        onClick={() =>
-                          handleRoleChange(
-                            user,
-                            user.role === "SUPER_ADMIN" ? "STAFF" : "SUPER_ADMIN"
-                          )
-                        }
-                        disabled={!isOnline}
-                      >
-                        Toggle Role
-                      </button>
-                      <button
-                        className="btn btn-secondary"
-                        type="button"
-                        onClick={() => handleToggleActive(user)}
-                        disabled={!isOnline}
-                      >
-                        Toggle Active
-                      </button>
-                      <button
-                        className="btn btn-secondary"
-                        type="button"
-                        onClick={() => handleDelete(user)}
-                        disabled={!isOnline}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredUsers.length === 0 && (
+        <section className="detail-panel">
+          <div className="table-wrapper">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={6}>No admin users found.</td>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td>{user.id}</td>
+                    <td>{user.username}</td>
+                    <td>{user.role}</td>
+                    <td>{user.isActive ? "Active" : "Inactive"}</td>
+                    <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button
+                          className="btn btn-secondary"
+                          type="button"
+                          onClick={() =>
+                            handleRoleChange(
+                              user,
+                              user.role === "SUPER_ADMIN" ? "STAFF" : "SUPER_ADMIN"
+                            )
+                          }
+                          disabled={!isOnline}
+                        >
+                          Toggle Role
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          type="button"
+                          onClick={() => handleToggleActive(user)}
+                          disabled={!isOnline}
+                        >
+                          Toggle Active
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          type="button"
+                          onClick={() => handleDelete(user)}
+                          disabled={!isOnline}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={6}>No admin users found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
     </section>
   );
