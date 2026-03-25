@@ -26,8 +26,11 @@ const getWorkspaceTitle = (pathname: string) => {
     return "Admin Access";
   }
 
-  const matchedLink = [...patientLinks, ...adminOpsLinks, ...superAdminLinks].find((link) =>
-    pathname.startsWith(link.to)
+  const linkPool = [...patientLinks, ...adminOpsLinks, ...superAdminLinks].sort(
+    (a, b) => b.to.length - a.to.length
+  );
+  const matchedLink = linkPool.find((link) =>
+    link.to === "/" ? pathname === "/" : pathname.startsWith(link.to)
   );
 
   if (!matchedLink) {
